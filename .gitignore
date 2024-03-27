@@ -1,0 +1,14 @@
+secrets.yaml
+.HA_VERSION
+
+home-assistant_v2.db*
+home-assistant.log*
+
+zigbee.db
+
+.cloud/
+.storage/
+zigbee2mqtt/
+tts/
+custom_components/
+blueprints/
