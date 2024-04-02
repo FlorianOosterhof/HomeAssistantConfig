@@ -1,0 +1,228 @@
+# # Design of the "Total domestic hot water gas consumed" sensor:
+# # There are 3 sensors:
+# # - Binary sensor: DHW active
+# # - Binary sensor: Flame on
+# # - Sensor: total gas consumed
+# # Assumptions: Whenever the "total gas consumed" sensor is increased, it has because the "Flame on" sensor was on
+# # for some time. The domestic hot water gas consumed is calculated as:
+# # - Whenever the "gas consumed" sensor is updated by value G between timestamps T0 and T1, calculate the ratio:
+# #     R = (time between T0 and T1 that both "DHW active" and "Flame on" were on) /
+# #         (time between T0 and T1 that "Flame on" was on)
+# # - Increment the "Total domestic hot water gas consumed" sensor by G * R.
+# # Note: Since "total gas consumed" was increased, the denominator of the ratio R is non-zero, so the calculation
+# # is not undefined.
+
+# # Design of the template to calculate the "total domestic hot water gas consumed".
+# # Auxillary sensors:
+# # - Simplify the calculations by making a cumulative sensor of the binary sensors "DHW active" and "Flame on", with
+# #   states 00 (0, both off), 01 (1, flame on), 10 (2, dhw on), 11 (3, both on)
+# # - Trigger when the cumulative sensor has changed state for at least 1 second. This is done since the 2 binary
+# #   sensors may change state "at the same time" (they are the result of 1 OpenTherm Write/Read with multiple binary
+# #   sensors as output, so both of their states may change very shortly after another). Due to the async nature of
+# #   HA, the template may then calculate twice simultaneously. By requiring the cumulative state to have been reached
+# #   for at least 1 second, the trigger will fire only once.
+# # - Track the relevant binary sensor times in separate sensors that update when the relevant binary sensor changes
+# #   from "on" to another state.
+# # With these sensors, the ratio R can at any time be readily calculated as long as the current time is available:
+# #   The numerator and denominator are the value of the time-tracking sensor, plus if the binary sensor is on, the
+# #   time between its last_changed value and the current time.
+# # Therefore, the template triggers on:
+# # - Binary sensor changes from "on" to another state, which performs:
+# #   - Update of the relevant time-tracking sensor
+# # - Total gas consumed state changes (from TG to TG + G), which performs:
+# #   - Calculation of the numerator and denominator of the ratio R, which is an update of the auxillary
+# #     time-tracking sensors, and these are actually updated
+# #   - Calculation of the ratio R and storing it in another auxillary sensor.
+# #   - Increment the "DHW gas consumed" sensor by G * R
+# # - DHW gas consumed state changes:
+# #   - Reset the time-tracking sensors to 0, so that the ratio is calculated anew starting from the moment the last
+# #     total gas consumed update was done.
+# #
+# # An important implementation detail is: Updates of the time-tracking sensors based on the binary-sensor change
+# # from "on" to a different should not be done simply based on the time the binary sensor was in "on" state,
+# # because during that time there might have been updates to the total gas consumed sensor. Instead, it should be
+# # the time between the state change from "on" to a different state and the maximum of the following 2 timestamps:
+# # - The time at which the binary sensor changed to "on"
+# # - The last time the time-tracking sensor changed state.
+# # Since the time-tracking sensor only changes when the binary sensor updates or when it is reset to 0, this
+# # ensures the time-tracking sensor tracks only the binary sensor "on" time since the last "total gas consumed"
+# # state change.
+
+# # The cumulative state: 00 (0, both off), 01 (1, flame on), 10 (2, dhw on), 11 (3, both on)
+# - trigger:
+#     - platform: state
+#       entity_id: binary_sensor.slave_flame_on_boiler_ketel
+#       to: # to any state, but no attribute changes
+#       id: "flame"
+#     - platform: state
+#       entity_id: binary_sensor.slave_dhw_active_boiler_ketel
+#       to:
+#       id: "dhw"
+#   action:
+#     - variables:
+#         flame_on: "{{ is_state('binary_sensor.slave_flame_on_boiler_ketel', 'on') | bool }}"
+#         dhw_on: "{{ is_state('binary_sensor.slave_dhw_active_boiler_ketel', 'on') | bool }}"
+#         cumulative_state: "{{ iif(flame_on | bool, 1, 0) + iif(dhw_on | bool, 2, 0) }}"
+#   sensor:
+#     - name: Flame and DHW state
+#       state: "{{ cumulative_state }}"
+#       unit_of_measurement: ""
+#       unique_id: aee87562-41d9-4e96-b711-0b2c8c0554c0
+# # Debounced cumulative state. A (near) simultaneous change of both binary sensors will trigger the above template
+# # twice, but it will trigger this one only once. Triggering a template on state changes with "for" may result in
+# # trigger.from_state to be not the previous "stable" state, but a state that was not held for "for" duration. To
+# # ensure that we also know which was the previous "stable" state, a new "debounced" sensor is created which only
+# # stores the stable states. Triggering on state changes of this debounced sensor will show the previous and new stable
+# # states.
+# - trigger:
+#     - platform: state
+#       entity_id: sensor.flame_and_dhw_state
+#       to:
+#       id: "state"
+#       for:
+#         milliseconds: 500
+#   sensor:
+#     - name: Flame and DHW state debounced
+#       state: "{{ trigger.to_state.state }}"
+#       unit_of_measurement: ""
+#       unique_id: 7b5d5400-e311-47c3-8184-724000bc060b
+# - trigger:
+#     - platform: state
+#       entity_id: sensor.flame_and_dhw_state_debounced
+#       to:
+#       id: "state"
+#     - platform: state
+#       entity_id: sensor.gas_consumed
+#       to: # Empty "to:" triggers only state changes, not attribute changes
+#       id: "gas"
+#     - platform: state
+#       entity_id: sensor.gas_dhw_consumed_incr
+#       to:
+#       id: "gas_dhw"
+#     - platform: time_pattern
+#       seconds: "/20"
+#       id: "time"
+#   action:
+#     - variables:
+#         curr_time: >
+#           {% if trigger.id == "time" %}
+#             {{ trigger.now }}
+#           {% else %}
+#             {{ trigger.to_state.last_changed }}
+#           {% endif %}
+
+#         curr_timestamp: "{{ as_timestamp(curr_time) }}"
+
+#         curr_cumulative_state: >
+#           {% if trigger.id == "state" %}
+#             {{ trigger.to_state.state | int(0) }}
+#           {% else %}
+#             {{ states('sensor.flame_and_dhw_state_debounced') | int(0) }}
+#           {% endif %}
+
+#         prev_cumulative_state: >
+#           {% if trigger.id == "state" %}
+#             {{ trigger.from_state.state | int(0) }}
+#           {% else %}
+#             {{ curr_cumulative_state }}
+#           {% endif %}
+
+#         prev_flame_dhw_on: "{{   prev_cumulative_state | int == 3 }}"
+#         prev_flame_other_on: "{{ prev_cumulative_state | int == 1 }}"
+
+#         curr_flame_dhw_on: "{{   curr_cumulative_state | int == 3 }}"
+#         curr_flame_other_on: "{{ curr_cumulative_state | int == 1 }}"
+
+#         cumulative_state_last_changed: "{{ as_timestamp(states.sensor.flame_and_dhw_state_debounced.last_changed) }}"
+
+#         flame_other_duration_last_changed: "{{ as_timestamp(states.sensor.flame_other_duration.last_changed) }}"
+#         flame_dhw_duration_last_changed: "{{   as_timestamp(states.sensor.flame_dhw_duration.  last_changed) }}"
+
+#         flame_other_duration_incr: >
+#           {% if prev_flame_other_on %}
+#             {% set t0 = curr_timestamp | float %}
+#             {% set t1 = cumulative_state_last_changed | float %}
+#             {% set t2 = flame_other_duration_last_changed | float %}
+#             {{ t0 - max(t1, t2) }}
+#           {% else %}
+#             0.0
+#           {% endif %}
+#         flame_dhw_duration_incr: >
+#           {% if prev_flame_dhw_on %}
+#             {{ curr_timestamp | float - max(cumulative_state_last_changed   | float, flame_dhw_duration_last_changed   | float) }}
+#           {% else %}
+#             0.0
+#           {% endif %}
+
+#         flame_other_duration: >
+#           {% if trigger.id == 'gas_dhw' and trigger.to_state.attributes.status == 'final' %}
+#             0.0
+#           {% else %}
+#             {% set prev_state = states('sensor.flame_other_duration') | float(0.0) %}
+#             {{ prev_state | float + flame_other_duration_incr | float }}
+#           {% endif %}
+#         flame_dhw_duration: >
+#           {% if trigger.id == 'gas_dhw' and trigger.to_state.attributes.status == 'final' %}
+#             0.0
+#           {% else %}
+#             {% set prev_state = states('sensor.flame_dhw_duration') | float(0.0) %}
+#             {{ prev_state | float + flame_dhw_duration_incr | float }}
+#           {% endif %}
+
+#         # Ratio, gas diff & split gas usages
+#         flame_dhw_ratio: >
+#           {% if flame_other_duration | float > 0.0 or flame_dhw_duration | float > 0.0 %}
+#             {% set ratio_raw = (flame_dhw_duration | float) / (flame_dhw_duration | float + flame_other_duration | float) %}
+#             {{ min(1.0, max(0.0, ratio_raw)) }}
+#           {% else %}
+#             0.0
+#           {% endif %}
+#         gas_diff: >
+#           {% if trigger.id == 'gas' %}
+#             {% if is_number(trigger.to_state.state) and is_number(trigger.from_state.state) %}
+#               {% set diff = trigger.to_state.state | float - trigger.from_state.state | float %}
+#               {{ diff }}
+#             {% else %}
+#               0.0
+#             {% endif %}
+#           {% else %}
+#             0.0
+#           {% endif %}
+#         gas_consumed_dhw_incr: >
+#           {{ flame_dhw_ratio | float * gas_diff | float }}
+#         gas_consumed_dhw_incr_attr: >
+#           {{ iif(trigger.id == 'gas', 'final', 'accumulating') }}
+#         gas_consumed_dhw_prev: >
+#           {{ states('sensor.gas_consumed_dhw') }}
+#         gas_consumed_dhw_available: >
+#           {{ is_number(gas_consumed_dhw_prev) }}
+#         gas_consumed_dhw_new: >
+#           {{ gas_consumed_dhw_prev | float(0.0) + gas_consumed_dhw_incr | float(0.0) }}
+#   sensor:
+#     - name: Flame DHW duration
+#       state: "{{ flame_dhw_duration }}"
+#       unit_of_measurement: s
+#       unique_id: 838de881-bb86-4a10-90b3-34d025eace12
+#       attributes:
+#         curr_time: "{{ curr_time }}"
+#         curr_cumulative_state: "{{ curr_cumulative_state }}"
+#         prev_cumulative_state: "{{ prev_cumulative_state }}"
+#         flame_other_duration_incr: "{{ flame_other_duration_incr }}"
+#         flame_dhw_duration_incr: "{{ flame_dhw_duration_incr }}"
+#     - name: Flame other duration
+#       state: "{{ flame_other_duration }}"
+#       unit_of_measurement: s
+#       unique_id: 53655621-5fdf-4e2a-9581-5fa1f1011c95
+#     - name: Flame DHW percentage
+#       state: "{{ flame_dhw_ratio | float * 100.0 }}"
+#       unit_of_measurement: "%"
+#       unique_id: f9d0a103-3dd0-45f3-b4af-5eb3d19bb3f8
+#     - name: Gas consumed DHW incr
+#       state: "{{ gas_consumed_dhw_incr }}"
+#       unit_of_measurement: m³
+#       unique_id: 8739ce5b-8fbb-4070-91a0-e600d1f15029
+#     - name: Gas consumed DHW
+#       state: "{{ gas_consumed_dhw_new }}"
+#       unit_of_measurement: m³
+#       availability: "{{ gas_consumed_dhw_available }}"
+#       unique_id: f428a286-dc4f-403e-a033-da459cb26c5d
