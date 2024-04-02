@@ -1,0 +1,92 @@
+- trigger:
+    # Actually we also want to trigger on the "derivative" of the temperature sensor. However, probably due to the
+    # asynchronous nature of HA, this causes the I-term sensor to reset to 0 because the 2 triggers for temperature
+    # and its derivative are almost at the same time, so "prev_i" is set to the same value in both, but "i_increment"
+    # is 0 for the derivative-based-trigger, which triggers slightly later, so that the I-term sensor is reset to 0 a
+    # few milliseconds after being increased, which causes it to be simply equal to the I-term increment, but never
+    # actually accumulate.
+    - platform: state
+      entity_id: sensor.room_temp_thermostat_ketel
+      to:
+      id: "temp"
+    - platform: state
+      entity_id: climate.ketel
+      attribute: temperature
+      id: "setpoint"
+    - platform: time_pattern
+      minutes: "*"
+      id: "time"
+  action:
+    - variables:
+        # Variables
+        lookahead: "{{  states('input_number.thermostat_pid_lookahead') | float(0.0)  }}" # (Kd/Kp) [minutes]
+        lookbehind: "{{ states('input_number.thermostat_pid_lookbehind') | float(0.0) }}" # (Ki*Kp) [minutes]
+        control_output_per_degree: 100 #                                                          (Kp)    [%/degC]
+        max_control_output: 100 #                                                                         [%]
+        min_control_output: 0 #                                                                           [%]
+
+        # Derived values
+        min_degrees: "{{ (min_control_output | float) / (control_output_per_degree | float) }}"
+        max_degrees: "{{ (max_control_output | float) / (control_output_per_degree | float) }}"
+
+        min_degree_minutes: "{{ (min_degrees | float) * (lookbehind | float) }}"
+        max_degree_minutes: "{{ (max_degrees | float) * (lookbehind | float) }}"
+
+        # Input values (setpoint, current temp, derivative)
+        sv: "{{ state_attr('climate.ketel', 'temperature') | float(20.0) }}"
+        pv: "{{ states('sensor.room_temp_thermostat_ketel') | float(sv) }}"
+        der: "{{ states('sensor.room_temperature_derivative_per_min_avg_over_15_min') | float(0.0) }}"
+
+        # Degree minutes
+        prev_degree_minutes: "{{ states('sensor.thermostat_pid_degree_minutes') }}"
+        degree_minutes_prev_temp: >
+          {% if trigger.id == 'temp' %}
+            {% set prev_temp = trigger.from_state.state %}
+            {% if is_number(prev_temp) %}
+              {{ prev_temp }}
+            {% else %}
+              {{ sv }}
+            {% endif %}
+          {% else %}
+            {{ pv }}
+          {% endif %}
+        degree_minutes_time_diff: >
+          {% set prev_degree_minutes_changed = states.sensor.thermostat_pid_degree_minutes.last_changed %}
+          {% if trigger.id == 'temp' %}
+            {% set prev_temp_changed = trigger.from_state.last_changed %}
+            {% set curr_time = trigger.to_state.last_changed %}
+            {{ as_timestamp(curr_time) - max(as_timestamp(prev_degree_minutes_changed), as_timestamp(prev_temp_changed, prev_degree_minutes_changed)) }}
+          {% else %}
+            {% set prev_temp_changed = states.sensor.room_temp_thermostat_ketel.last_changed %}
+            {% set curr_time = trigger.now %}
+            {{ as_timestamp(curr_time) - max(as_timestamp(prev_degree_minutes_changed), as_timestamp(prev_temp_changed, prev_degree_minutes_changed)) }}
+          {% endif  %}
+        degree_minutes_incr: >
+          {{ (sv | float - degree_minutes_prev_temp | float) * (degree_minutes_time_diff | float) / 60 }}
+        degree_minutes: "{{ prev_degree_minutes | float + degree_minutes_incr | float }}"
+        degree_minutes_clamped: "{{ min(max_degree_minutes | float, max(min_degree_minutes | float, degree_minutes | float)) }}"
+
+        # Combine the P and D terms: together they are the "expected temperature in X minutes", which we can subtract from the setpoint as a whole.
+        pd: "{{ sv | float - (pv | float + lookahead | float * der | float) }}"
+        # I-term
+        i: "{{ (degree_minutes_clamped | float)  / (lookbehind | float) }}"
+
+        control_value: "{{ pd | float + i | float }}"
+        control_output: "{{ (control_value | float) * (control_output_per_degree | float) }}"
+        control_output_clamped: "{{ min(max_control_output | float, max(min_control_output | float, control_output | float)) }}"
+  sensor:
+    - name: Thermostat PID degree minutes
+      state: "{{ degree_minutes_clamped }}"
+      unit_of_measurement: °Cmin
+    - name: Thermostat PID PD-term
+      state: "{{ pd }}"
+      unit_of_measurement: °C
+    - name: Thermostat PID I-term
+      state: "{{ i }}"
+      unit_of_measurement: "°C"
+    - name: Thermostat PID Control Value
+      state: "{{ control_value }}"
+      unit_of_measurement: °C
+    - name: Thermostat PID Control Output
+      state: "{{ control_output_clamped }}"
+      unit_of_measurement: "%"
