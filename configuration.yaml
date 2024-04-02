@@ -7,3 +7,5 @@ script: !include scripts.yaml
 scene: !include scenes.yaml
 
 rest_command: !include_dir_merge_named rest_commands
+
+template: !include_dir_merge_list templates

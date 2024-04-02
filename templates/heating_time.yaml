@@ -1,0 +1,74 @@
+- trigger:
+    - platform: state
+      entity_id: binary_sensor.slave_ch_active_boiler_ketel
+      from: "on"
+      id: "ch_turns_off"
+    - platform: state
+      entity_id: binary_sensor.slave_ch_active_boiler_ketel
+      to: "on"
+      id: "ch_turns_on"
+    - platform: time_pattern
+      minutes: "*"
+      id: "time"
+  action:
+    - variables:
+        max_cycle_time: "{{ 20 * 60 }}" # 20 minutes in seconds
+        curr_time: >
+          {% if trigger.id == "time" %}
+            {{ trigger.now }}
+          {% else %}
+            {{ trigger.to_state.last_changed }}
+          {% endif %}
+        prev_time: "{{ state_attr('sensor.central_heating_relative_on_time', 'prev_time') | float(0.0) }}"
+        new_prev_time: >
+          {% if trigger.id == "ch_turns_off" or trigger.id == "ch_turns_on" %}
+            {{ as_timestamp(trigger.to_state.last_changed) - as_timestamp(trigger.from_state.last_changed) }}
+          {% else %}
+            {{ prev_time }}
+          {% endif %}
+        last_changed_ts: >
+          {% set cycle_time_last_changed_ts = as_timestamp(states.sensor.central_heating_cycle_time.last_changed) %}
+          {% set rel_on_time_last_changed_ts = as_timestamp(states.sensor.central_heating_relative_on_time.last_changed) %}
+          {{ max(cycle_time_last_changed_ts, rel_on_time_last_changed_ts) }}
+        time_since_last_changed: "{{ as_timestamp(curr_time) - last_changed_ts | float }}"
+        ch_cycle_time: >
+          {% set prev_value = states('sensor.central_heating_cycle_time') | float(0.0) %}
+          {% if trigger.id == "ch_turns_off" %}
+            {{ min(max_cycle_time | float , prev_time | float + new_prev_time | float) }}
+          {% elif trigger.id == "ch_turns_on" %}
+            {{ prev_value }}
+          {% else %}
+            {% if time_since_last_changed | float > max_cycle_time | float %}
+              0.0
+            {% else %}
+              {{ prev_value }}
+            {% endif %}
+          {% endif %}
+        ch_rel_on_time: >
+          {% set prev_value = states('sensor.central_heating_relative_on_time') | float(0.0) %}
+          {% if trigger.id == "ch_turns_off" %}
+            {% set off_time  = prev_time | float %}
+            {% set on_time = new_prev_time | float %}
+            {% set on_time_maxed = min(max_cycle_time | float, on_time) %}
+            {% set total_time_maxed = min(max_cycle_time | float, on_time_maxed + off_time) %}
+            {{ on_time_maxed / total_time_maxed * 100 }}
+          {% elif trigger.id == "ch_turns_on" %}
+            {{ prev_value }}
+          {% else %}
+            {% if time_since_last_changed | float > max_cycle_time | float %}
+              {% if is_state('binary_sensor.slave_ch_active_boiler_ketel', 'on') %}
+                100.0
+              {% else %}
+                0.0
+              {% endif %}
+            {% else %}
+              {{ prev_value }}
+            {% endif %}
+          {% endif %}
+  sensor:
+    - name: Central Heating Cycle Time
+      state: "{{ ch_cycle_time }}"
+      unit_of_measurement: s
+    - name: Central Heating Relative On Time
+      state: "{{ ch_rel_on_time }}"
+      unit_of_measurement: "%"
