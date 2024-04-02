@@ -1,0 +1,10 @@
+- alias: update mindergas
+  trigger:
+    - platform: time
+      at: 00:01:57
+  action:
+    - service: rest_command.post_mindergas
+      data_template:
+        date: "{{ (now().timestamp() - 60*60) | timestamp_custom('%Y-%m-%d') }}"
+        meterreading: "{{ states('sensor.gas_consumed') }}"
+  id: eb707542e3664ac8b17979c9eeb93cd9
