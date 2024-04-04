@@ -69,6 +69,8 @@
     - name: Central Heating Cycle Time
       state: "{{ ch_cycle_time }}"
       unit_of_measurement: s
+      attributes:
+        prev_time: "{{ new_prev_time }}"
     - name: Central Heating Relative On Time
       state: "{{ ch_rel_on_time }}"
       unit_of_measurement: "%"
