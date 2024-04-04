@@ -27,9 +27,8 @@
             {{ prev_time }}
           {% endif %}
         last_changed_ts: >
-          {% set cycle_time_last_changed_ts = as_timestamp(states.sensor.central_heating_cycle_time.last_changed) %}
-          {% set rel_on_time_last_changed_ts = as_timestamp(states.sensor.central_heating_relative_on_time.last_changed) %}
-          {{ max(cycle_time_last_changed_ts, rel_on_time_last_changed_ts) }}
+          {% from 'last_changed_ts.jinja' import last_changed_ts %}
+          {{ last_changed_ts(states.sensor.central_heating_cycle_time, states.sensor.central_heating_relative_on_time)}}
         time_since_last_changed: "{{ as_timestamp(curr_time) - last_changed_ts | float }}"
         ch_cycle_time: >
           {% set prev_value = states('sensor.central_heating_cycle_time') | float(0.0) %}
