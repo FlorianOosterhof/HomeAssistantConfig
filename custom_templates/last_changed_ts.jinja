@@ -1,0 +1,3 @@
+{% macro last_changed_ts() -%}
+{{ varargs | map(attribute='last_changed') | list | map('as_timestamp') | list | max }}
+{% endmacro -%}
