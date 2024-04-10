@@ -60,8 +60,11 @@
             {% endif %}
           {% endif %}
         total_time: "{{ min(max_cycle_time | float, on_time | float + off_time | float) / 60.0 }}"
+        # For the relative on time, take as nominator the minimum between the calculated "on_time" and what is left as
+        # "room" in an interval of size "max_cycle_time" when "off_time" has been placed inside already. Specifically,
+        # if "off_time" is equal to "max_cycle_time" then there is no room, and so the relative on time becomes 0.
         rel_on_time: >
-          {% set on = on_time | float / 60.0 %}
+          {% set on = min(on_time | float, max_cycle_time | float - off_time | float) / 60.0 %}
           {% set total = total_time | float %}
           {{ 0.0 if total <= 0.0 else min(100.0, max(0.0, on / total * 100.0)) }}
   sensor:
