@@ -1,31 +1,3 @@
-# # The cumulative state: 00 (0, both off), 01 (1, flame on), 10 (2, dhw on), 11 (3, both on)
-- sensor:
-    - unique_id: flame_and_dhw_state
-      name: Flame and DHW state
-      state: >
-        {% set flame_on = is_state('binary_sensor.slave_flame_on_boiler_ketel', 'on') | bool %}
-        {% set dhw_on =   is_state('binary_sensor.slave_dhw_active_boiler_ketel', 'on') | bool %}
-        {{ iif(flame_on, 1, 0) + iif(dhw_on, 2, 0) }}
-      unit_of_measurement: ""
-
-# Debounced cumulative state. A (near) simultaneous change of both binary sensors will trigger the above template
-# twice, but it will trigger this one only once. Triggering a template on state changes with "for" may result in
-# trigger.from_state to be not the previous "stable" state, but a state that was not held for "for" duration. To
-# ensure that we also know which was the previous "stable" state, a new "debounced" sensor is created which only
-# stores the stable states. Triggering on state changes of this debounced sensor will show the previous and new stable
-# states.
-- trigger:
-    - platform: state
-      entity_id: sensor.flame_and_dhw_state
-      to:
-      id: "state"
-      for:
-        milliseconds: 500
-  sensor:
-    - unique_id: flame_and_dhw_state_debounced
-      name: Flame and DHW state debounced
-      state: "{{ trigger.to_state.state }}"
-      unit_of_measurement: ""
 # - trigger:
 #     - platform: state
 #       entity_id: sensor.flame_and_dhw_state_debounced
