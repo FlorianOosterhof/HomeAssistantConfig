@@ -1,0 +1,140 @@
+- trigger:
+    - platform: state
+      entity_id: sensor.flame_and_dhw_state_debounced
+      to:
+      id: "state"
+    - platform: state
+      entity_id: sensor.gas_consumed
+      to: # Empty "to:" triggers only state changes, not attribute changes
+      id: "gas"
+    - platform: state
+      entity_id: sensor.dhw_flame_time_ratio
+      attribute: is_final
+      id: "reset"
+    - platform: time_pattern
+      seconds: "/20"
+      id: "time"
+  action:
+    - variables:
+        curr_time: >
+          {% if trigger.id == "time" %}
+            {{ trigger.now }}
+          {% else %}
+            {{ trigger.to_state.last_changed }}
+          {% endif %}
+
+        curr_timestamp: "{{ as_timestamp(curr_time) }}"
+
+        curr_cumulative_state: >
+          {% if trigger.id == "state" %}
+            {{ trigger.to_state.state | int(0) }}
+          {% else %}
+            {{ states('sensor.flame_and_dhw_state_debounced') | int(0) }}
+          {% endif %}
+
+        prev_cumulative_state: >
+          {% if trigger.id == "state" %}
+            {{ trigger.from_state.state | int(0) }}
+          {% else %}
+            {{ curr_cumulative_state }}
+          {% endif %}
+
+        prev_flame_dhw_on: "{{   prev_cumulative_state | int == 3 }}"
+        prev_flame_other_on: "{{ prev_cumulative_state | int == 1 }}"
+
+        curr_flame_dhw_on: "{{   curr_cumulative_state | int == 3 }}"
+        curr_flame_other_on: "{{ curr_cumulative_state | int == 1 }}"
+
+        flame_other_duration_incr: >
+          {% if prev_flame_other_on %}
+            {% from 'last_changed_ts.jinja' import last_changed_ts %}
+            {% if trigger.id == "state" %}
+              {{ as_timestamp(curr_time) - last_changed_ts(trigger.from_state, states.sensor.flame_other_duration) | float }}
+            {% else %}
+              {{ as_timestamp(curr_time) - last_changed_ts(states.sensor.flame_and_dhw_state_debounced, states.sensor.flame_other_duration) | float }}
+            {% endif %}
+          {% else %}
+            0.0
+          {% endif %}
+        flame_dhw_duration_incr: >
+          {% if prev_flame_dhw_on %}
+            {% from 'last_changed_ts.jinja' import last_changed_ts %}
+            {% if trigger.id == "state" %}
+              {{ as_timestamp(curr_time) - last_changed_ts(trigger.from_state, states.sensor.flame_dhw_duration) | float }}
+            {% else %}
+              {{ as_timestamp(curr_time) - last_changed_ts(states.sensor.flame_and_dhw_state_debounced, states.sensor.flame_dhw_duration) | float }}
+            {% endif %}
+          {% else %}
+            0.0
+          {% endif %}
+  sensor:
+    - unique_id: flame_other_duration
+      name: Flame other duration
+      unit_of_measurement: s
+      state: >
+        {% if trigger.id == "reset" %}
+          0.0
+        {% else %}
+          {{ this.state | float + flame_other_duration_incr | float }}
+        {% endif %}
+      attributes:
+        is_final: "{{ 'true' if trigger.id == 'gas' else 'false' }}"
+        gas_incr: >
+          {% if trigger.id == "gas" %}
+            {% if is_number(trigger.to_state.state) and is_number(trigger.from_state.state) %}
+              {{ trigger.to_state.state | float - trigger.from_state.state | float }}
+            {% else %}
+              0.0
+            {% endif %}
+          {% else %}
+            0.0
+          {% endif %}
+    - unique_id: flame_dhw_duration
+      name: Flame DHW duration
+      unit_of_measurement: s
+      state: >
+        {% if trigger.id == "reset" %}
+          0.0
+        {% else %}
+          {{ this.state | float + flame_dhw_duration_incr | float }}
+        {% endif %}
+
+- trigger:
+    - platform: state
+      entity_id: sensor.flame_other_duration
+      attribute: is_final
+      id: "gas"
+    - platform: time_pattern
+      seconds: "/20"
+      id: "time"
+  sensor:
+    - unique_id: dhw_flame_time_ratio
+      name: DHW Flame time ratio
+      unit_of_measurement: ""
+      state: >
+        {% set t1_str = states('sensor.flame_dhw_duration') %}
+        {% set t2_str = states('sensor.flame_other_duration') %}
+        {% if is_number(t1_str) and is_number(t2_str) %}
+          {% set t1 = t1_str | float %}
+          {% set t2 = t2_str | float %}
+          {% if t1 > 0.0 or t2 > 0.0 %}
+            {{ t1 / (t1 + t2) }}
+          {% else %}
+            0.0
+          {% endif %}
+        {% else %}
+          0.0
+        {% endif %}
+      attributes:
+        is_final: >
+          {% if trigger.id == "gas" %}
+            {{ trigger.to_state.attributes.is_final }}
+          {% else %}
+            {{ this.attributes.is_final }}
+          {% endif %}
+        gas_incr: >
+          {% if trigger.id == "gas" and trigger.to_state.attributes.is_final == 'true' %}
+            {{ trigger.to_state.attributes.gas_incr }}
+          {% else %}
+            {{ this.attributes.gas_incr }}
+          {% endif %}
