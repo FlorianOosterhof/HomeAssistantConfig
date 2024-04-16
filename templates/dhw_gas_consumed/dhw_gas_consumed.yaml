@@ -1,140 +1,30 @@
-# - trigger:
-#     - platform: state
-#       entity_id: sensor.flame_and_dhw_state_debounced
-#       to:
-#       id: "state"
-#     - platform: state
-#       entity_id: sensor.gas_consumed
-#       to: # Empty "to:" triggers only state changes, not attribute changes
-#       id: "gas"
-#     - platform: state
-#       entity_id: sensor.gas_dhw_consumed_incr
-#       to:
-#       id: "gas_dhw"
-#     - platform: time_pattern
-#       seconds: "/20"
-#       id: "time"
-#   action:
-#     - variables:
-#         curr_time: >
-#           {% if trigger.id == "time" %}
-#             {{ trigger.now }}
-#           {% else %}
-#             {{ trigger.to_state.last_changed }}
-#           {% endif %}
+- trigger:
+    - platform: state
+      entity_id: sensor.dhw_flame_time_ratio
+      attribute: is_final
+      id: "gas"
+  sensor:
+    - unique_id: gas_consumed_dhw
+      name: Gas consumed for DHW
+      device_class: gas
+      state_class: total_increasing
+      unit_of_measurement: m³
+      state: >
+        {% if trigger.to_state.attributes.is_final == 'true' %}
+          {{ this.state | float + (trigger.to_state.state | float) * (trigger.to_state.attributes.gas_incr | float) }}
+        {% else %}
+          {{ this.state }}
+        {% endif %}
+      attributes:
+        is_final: "{{ trigger.to_state.attributes.is_final }}"
 
-#         curr_timestamp: "{{ as_timestamp(curr_time) }}"
-
-#         curr_cumulative_state: >
-#           {% if trigger.id == "state" %}
-#             {{ trigger.to_state.state | int(0) }}
-#           {% else %}
-#             {{ states('sensor.flame_and_dhw_state_debounced') | int(0) }}
-#           {% endif %}
-
-#         prev_cumulative_state: >
-#           {% if trigger.id == "state" %}
-#             {{ trigger.from_state.state | int(0) }}
-#           {% else %}
-#             {{ curr_cumulative_state }}
-#           {% endif %}
-
-#         prev_flame_dhw_on: "{{   prev_cumulative_state | int == 3 }}"
-#         prev_flame_other_on: "{{ prev_cumulative_state | int == 1 }}"
-
-#         curr_flame_dhw_on: "{{   curr_cumulative_state | int == 3 }}"
-#         curr_flame_other_on: "{{ curr_cumulative_state | int == 1 }}"
-
-#         cumulative_state_last_changed: "{{ as_timestamp(states.sensor.flame_and_dhw_state_debounced.last_changed) }}"
-
-#         flame_other_duration_last_changed: "{{ as_timestamp(states.sensor.flame_other_duration.last_changed) }}"
-#         flame_dhw_duration_last_changed: "{{   as_timestamp(states.sensor.flame_dhw_duration.  last_changed) }}"
-
-#         flame_other_duration_incr: >
-#           {% if prev_flame_other_on %}
-#             {% set t0 = curr_timestamp | float %}
-#             {% set t1 = cumulative_state_last_changed | float %}
-#             {% set t2 = flame_other_duration_last_changed | float %}
-#             {{ t0 - max(t1, t2) }}
-#           {% else %}
-#             0.0
-#           {% endif %}
-#         flame_dhw_duration_incr: >
-#           {% if prev_flame_dhw_on %}
-#             {{ curr_timestamp | float - max(cumulative_state_last_changed   | float, flame_dhw_duration_last_changed   | float) }}
-#           {% else %}
-#             0.0
-#           {% endif %}
-
-#         flame_other_duration: >
-#           {% if trigger.id == 'gas_dhw' and trigger.to_state.attributes.status == 'final' %}
-#             0.0
-#           {% else %}
-#             {% set prev_state = states('sensor.flame_other_duration') | float(0.0) %}
-#             {{ prev_state | float + flame_other_duration_incr | float }}
-#           {% endif %}
-#         flame_dhw_duration: >
-#           {% if trigger.id == 'gas_dhw' and trigger.to_state.attributes.status == 'final' %}
-#             0.0
-#           {% else %}
-#             {% set prev_state = states('sensor.flame_dhw_duration') | float(0.0) %}
-#             {{ prev_state | float + flame_dhw_duration_incr | float }}
-#           {% endif %}
-
-#         # Ratio, gas diff & split gas usages
-#         flame_dhw_ratio: >
-#           {% if flame_other_duration | float > 0.0 or flame_dhw_duration | float > 0.0 %}
-#             {% set ratio_raw = (flame_dhw_duration | float) / (flame_dhw_duration | float + flame_other_duration | float) %}
-#             {{ min(1.0, max(0.0, ratio_raw)) }}
-#           {% else %}
-#             0.0
-#           {% endif %}
-#         gas_diff: >
-#           {% if trigger.id == 'gas' %}
-#             {% if is_number(trigger.to_state.state) and is_number(trigger.from_state.state) %}
-#               {% set diff = trigger.to_state.state | float - trigger.from_state.state | float %}
-#               {{ diff }}
-#             {% else %}
-#               0.0
-#             {% endif %}
-#           {% else %}
-#             0.0
-#           {% endif %}
-#         gas_consumed_dhw_incr: >
-#           {{ flame_dhw_ratio | float * gas_diff | float }}
-#         gas_consumed_dhw_incr_attr: >
-#           {{ iif(trigger.id == 'gas', 'final', 'accumulating') }}
-#         gas_consumed_dhw_prev: >
-#           {{ states('sensor.gas_consumed_dhw') }}
-#         gas_consumed_dhw_available: >
-#           {{ is_number(gas_consumed_dhw_prev) }}
-#         gas_consumed_dhw_new: >
-#           {{ gas_consumed_dhw_prev | float(0.0) + gas_consumed_dhw_incr | float(0.0) }}
-#   sensor:
-#     - name: Flame DHW duration
-#       state: "{{ flame_dhw_duration }}"
-#       unit_of_measurement: s
-#       unique_id: 838de881-bb86-4a10-90b3-34d025eace12
-#       attributes:
-#         curr_time: "{{ curr_time }}"
-#         curr_cumulative_state: "{{ curr_cumulative_state }}"
-#         prev_cumulative_state: "{{ prev_cumulative_state }}"
-#         flame_other_duration_incr: "{{ flame_other_duration_incr }}"
-#         flame_dhw_duration_incr: "{{ flame_dhw_duration_incr }}"
-#     - name: Flame other duration
-#       state: "{{ flame_other_duration }}"
-#       unit_of_measurement: s
-#       unique_id: 53655621-5fdf-4e2a-9581-5fa1f1011c95
-#     - name: Flame DHW percentage
-#       state: "{{ flame_dhw_ratio | float * 100.0 }}"
-#       unit_of_measurement: "%"
-#       unique_id: f9d0a103-3dd0-45f3-b4af-5eb3d19bb3f8
-#     - name: Gas consumed DHW incr
-#       state: "{{ gas_consumed_dhw_incr }}"
-#       unit_of_measurement: m³
-#       unique_id: 8739ce5b-8fbb-4070-91a0-e600d1f15029
-#     - name: Gas consumed DHW
-#       state: "{{ gas_consumed_dhw_new }}"
-#       unit_of_measurement: m³
-#       availability: "{{ gas_consumed_dhw_available }}"
-#       unique_id: f428a286-dc4f-403e-a033-da459cb26c5d
+- trigger:
+    - platform: state
+      entity_id: sensor.gas_consumed_for_dhw
+  sensor:
+    - unique_id: gas_consumed_ch
+      name: Gas consumed for CH
+      device_class: gas
+      state_class: total_increasing
+      unit_of_measurement: m³
+      state: "{{ states('sensor.gas_consumed') | float - trigger.to_state.state | float }}"
