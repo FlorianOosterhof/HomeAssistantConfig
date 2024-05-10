@@ -3,6 +3,14 @@
       entity_id: sensor.dhw_flame_time_ratio
       attribute: is_final
       id: "gas"
+  action:
+    - variables:
+        increment: >
+          {% if trigger.to_state.attributes.is_final == 'true' %}
+            {{ (trigger.to_state.state | float) * (trigger.to_state.attributes.gas_incr | float) }}
+          {% else %}
+            0.0
+          {% endif %}
   sensor:
     - unique_id: gas_consumed_dhw
       name: Gas consumed for DHW
@@ -10,13 +18,11 @@
       state_class: total_increasing
       unit_of_measurement: m³
       state: >
-        {% if trigger.to_state.attributes.is_final == 'true' %}
-          {{ this.state | float + (trigger.to_state.state | float) * (trigger.to_state.attributes.gas_incr | float) }}
-        {% else %}
-          {{ this.state }}
-        {% endif %}
+        {{ (this.attributes.raw | float + increment | float) | round(3) }}
       attributes:
         is_final: "{{ trigger.to_state.attributes.is_final }}"
+        raw: >
+          {{ (this.attributes.raw | float + increment | float) }}
 
 - trigger:
     - platform: state
