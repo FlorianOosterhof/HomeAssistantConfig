@@ -33,4 +33,4 @@
       device_class: gas
       state_class: total_increasing
       unit_of_measurement: m³
-      state: "{{ states('sensor.gas_consumed') | float - trigger.to_state.state | float }}"
+      state: "{{ (states('sensor.gas_consumed') | float - trigger.to_state.state | float) | round(3) }}"
