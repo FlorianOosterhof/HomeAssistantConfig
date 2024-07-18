@@ -27,10 +27,18 @@
 - trigger:
     - platform: state
       entity_id: sensor.gas_consumed_for_dhw
+  action:
+    - variables:
+        total: "{{ states('sensor.gas_consumed') }}"
+        dhw: "{{   states('sensor.gas_consumed_for_dhw') }}"
   sensor:
     - unique_id: gas_consumed_ch
       name: Gas consumed for CH
       device_class: gas
       state_class: total_increasing
       unit_of_measurement: m³
-      state: "{{ (states('sensor.gas_consumed') | float - trigger.to_state.state | float) | round(3) }}"
+      availability: "{{ is_number(total) and is_number(dhw) }}"
+      state: "{{ (total | float - dhw | float) | round(3) }}"
+      attributes:
+        total: "{{ total }}"
+        dhw: "{{ dhw }}"
