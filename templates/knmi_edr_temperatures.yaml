@@ -1,0 +1,84 @@
+- trigger:
+    - platform: time_pattern
+      minutes: "/10"
+      id: "time"
+  action:
+    - variables:
+        # Get the current time, subtract 10 minutes, round to nearest 10 minutes:
+        # e.g.
+        # 22:19:59 -> 22:09:59 -> 22:10:00
+        # 22:20:05 -> 22:10:05 -> 22:10:00
+        # The trigger has a margin of 5 minutes to fire to ensure that the
+        # service will request the KNMI temperature of 10 minutes before that.
+        date_var: >
+          {% set date_val = trigger.now %}
+          {% set date_val_ts = date_val | as_timestamp %}
+          {% set prev_date_val_ts = ((date_val_ts - 10*60) / (10*60)) | round(0) * 10*60 %}
+          {% set prev_date_val = prev_date_val_ts | as_datetime | as_local %}
+          {{ prev_date_val }}
+        parameter_var: "t_dryb_10"
+        location_1_name: !secret knmi_location_1_name
+        location_2_name: !secret knmi_location_2_name
+        location_3_name: !secret knmi_location_3_name
+        location_4_name: !secret knmi_location_4_name
+    - service: rest_command.get_knmi_edr_observations_location_data
+      data:
+        location_id: !secret knmi_location_1_id
+        date_interval: "{{ date_var }}"
+        parameter_name: "{{ parameter_var }}"
+      response_variable: location_1_data
+    - service: rest_command.get_knmi_edr_observations_location_data
+      data:
+        location_id: !secret knmi_location_2_id
+        date_interval: "{{ date_var }}"
+        parameter_name: "{{ parameter_var }}"
+      response_variable: location_2_data
+    - service: rest_command.get_knmi_edr_observations_location_data
+      data:
+        location_id: !secret knmi_location_3_id
+        date_interval: "{{ date_var }}"
+        parameter_name: "{{ parameter_var }}"
+      response_variable: location_3_data
+    - service: rest_command.get_knmi_edr_observations_location_data
+      data:
+        location_id: !secret knmi_location_4_id
+        date_interval: "{{ date_var }}"
+        parameter_name: "{{ parameter_var }}"
+      response_variable: location_4_data
+  sensor:
+    - unique_id: location_1_knmi_temperature
+      name: "{{ location_1_name }} KNMI Temperature"
+      availability: "{{ location_1_data['status'] == 200 }}"
+      state: >
+        {% set data = location_1_data['content'] | from_json %}
+        {{ data['ranges'][parameter_var]['values'][0] }}
+      state_class: measurement
+      device_class: temperature
+      unit_of_measurement: °C
+    - unique_id: location_2_knmi_temperature
+      name: "{{ location_2_name }} KNMI Temperature"
+      availability: "{{ location_2_data['status'] == 200 }}"
+      state: >
+        {% set data = location_2_data['content'] | from_json %}
+        {{ data['ranges'][parameter_var]['values'][0] }}
+      state_class: measurement
+      device_class: temperature
+      unit_of_measurement: °C
+    - unique_id: location_3_knmi_temperature
+      name: "{{ location_3_name }} KNMI Temperature"
+      availability: "{{ location_3_data['status'] == 200 }}"
+      state: >
+        {% set data = location_3_data['content'] | from_json %}
+        {{ data['ranges'][parameter_var]['values'][0] }}
+      state_class: measurement
+      device_class: temperature
+      unit_of_measurement: °C
+    - unique_id: location_4_knmi_temperature
+      name: "{{ location_4_name }} KNMI Temperature"
+      availability: "{{ location_4_data['status'] == 200 }}"
+      state: >
+        {% set data = location_4_data['content'] | from_json %}
+        {{ data['ranges'][parameter_var]['values'][0] }}
+      state_class: measurement
+      device_class: temperature
+      unit_of_measurement: °C
