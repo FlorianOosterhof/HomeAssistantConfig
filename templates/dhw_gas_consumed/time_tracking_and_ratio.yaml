@@ -130,7 +130,7 @@
           {% if trigger.id == "gas" %}
             {{ trigger.to_state.attributes.is_final }}
           {% else %}
-            {{ this.attributes.is_final }}
+            {{ this.attributes.is_final == 'true' }}
           {% endif %}
         gas_incr: >
           {% if trigger.id == "gas" and trigger.to_state.attributes.is_final == 'true' %}
