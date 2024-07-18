@@ -1,0 +1,7 @@
+get_knmi_edr_observations_location_data:
+  url: https://api.dataplatform.knmi.nl/edr/v1/collections/observations/locations/{{ location_id }}{% if date_interval is defined or parameter_name is defined %}?{% endif %}{% if date_interval is defined %}datetime={{ date_interval | urlencode | replace("/", "%2F") }}{% endif %}{% if date_interval is defined and parameter_name is defined %}&{% endif %}{% if parameter_name is defined %}parameter-name={{parameter_name | urlencode}}{% endif %}
+  method: GET
+  headers:
+    Authorization: !secret knmi_edr_token
+    accept: application/prs.coverage+json
+  verify_ssl: true
