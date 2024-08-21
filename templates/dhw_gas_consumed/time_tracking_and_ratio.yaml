@@ -98,6 +98,13 @@
         {% else %}
           {{ this.state | float + flame_dhw_duration_incr | float }}
         {% endif %}
+    - unique_id: total_flame_dhw_duration
+      name: Total Flame DHW duration
+      device_class: duration
+      unit_of_measurement: s
+      state_class: total_increasing
+      state: >
+        {{ this.state | float + flame_dhw_duration_incr | float }}
 
 - trigger:
     - platform: state
