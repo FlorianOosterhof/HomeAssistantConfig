@@ -1,0 +1,35 @@
+- trigger:
+    - platform: time_pattern
+      minutes: "*"
+      id: "time"
+  condition:
+    - condition: template
+      value_template: "{{ as_timestamp(state_attr('sensor.temperature_in_24_hours', 'forecast_time'), as_timestamp(trigger.now)) - as_timestamp(trigger.now) < 23 * 60 * 60 }}"
+  action:
+    - action: weather.get_forecasts
+      target:
+        entity_id: weather.marshmallowhuis
+      data:
+        type: hourly
+      response_variable: hourly
+    - variables:
+        index: >
+          {%- set now_ts = as_timestamp(trigger.now) %}
+          {% for element in hourly['weather.marshmallowhuis']['forecast'] -%}
+            {%- set datetime = element['datetime'] %}
+            {%- set delta_time = as_timestamp(datetime, now_ts) - now_ts %}
+            {% if delta_time > 23 * 60 * 60 and delta_time < 24 * 60 * 60 -%}
+              {{- loop.index0 }}
+            {%- endif %}
+          {%- endfor %}
+        should_update: "{{ index | is_number }}"
+        data: "{{ iif(should_update | bool, hourly['weather.marshmallowhuis']['forecast'], [{'datetime':'', 'temperature':0.0}]) }}"
+  sensor:
+    - name: MetNo Home Outside Temperature in 24 hours
+      unique_id: metno_home_outside_temperature_in_24_hours
+      state: "{{ iif(should_update | bool, data[index | int(0)]['temperature'], this.state) }}"
+      unit_of_measurement: °C
+      device_class: temperature
+      state_class: measurement
+      attributes:
+        forecast_time: "{{ iif(should_update | bool, data[index | int(0)]['datetime'], this.attributes.forecast_time)}}"
