@@ -1,1 +1,10 @@
 mode: storage
+
+dashboards:
+  central-heating:
+    mode: yaml
+    filename: dashboards/central_heating_long_term.yaml
+    title: Central Heating Long-Term
+    icon: "mdi:home-analytics"
+    show_in_sidebar: true
+    require_admin: false

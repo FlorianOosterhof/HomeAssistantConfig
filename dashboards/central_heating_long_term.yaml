@@ -1,0 +1,373 @@
+views:
+  - type: sections
+    max_columns: 4
+    title: Long-term view
+    path: yearly
+    dense_section_placement: true
+    sections:
+      - type: grid
+        cards:
+          - type: custom:plotly-graph
+            hours_to_show: |-
+              $ex {
+                vars.now = Date.now()
+                vars.start = vars.now - 2*365*24*3600*1000
+                
+                vars.total_time_h = Math.floor((vars.now - vars.start) / 1000 / 3600);
+                vars.hours_to_show = vars.total_time_h
+                vars.get_daily_diff = (sum_var, window_size) => {
+                  ysn = Array()
+                  xsn = Array()
+                  const half_window_size = Math.floor(window_size / 2)
+                  for (var i = window_size; i < sum_var.ys.length; ++i)
+                  {
+                    ysn[i-window_size] = 24*(sum_var.ys[i] - sum_var.ys[i-window_size]) / window_size
+                    xsn[i-window_size] = sum_var.xs[i - half_window_size]
+                  }
+                  return {
+                    xs: xsn,
+                    ys: ysn,
+                    states: Array(),
+                    statistics: Array(),
+                    meta:
+                    {
+                      unit_of_measurement: sum_var.meta.unit_of_measurement + "/d"
+                    }
+                  }
+                }
+                vars.get_heat_loss = (vars, time) => {
+                  var xsn = Array()
+                  var ysn = Array()
+
+                  const energy = vars["gas_" + time + "_daily_avg"]
+                  const degdays = vars["degday_" + time + "_daily_avg"]
+                  const base_temps = vars["base_temp_" + time]
+                  const n0 = energy.ys.length
+                  const n1 = degdays.ys.length
+                  const N = Math.min(n0, n1)
+                  for (var i = 0; i < N; ++i)
+                  {
+                    xsn[i] = energy.xs[i + n0 - N];
+                    ysn[i] = energy.ys[i + n0 - N] * 8.8 / (degdays.ys[i + n1 - N] * 20) * (base_temps.ys[i + n1 - N] + 10);
+                  }
+                  const old_unit = "m³/°Cd"
+                  return {
+                    xs: xsn,
+                    ys: ysn,
+                    states: Array(),
+                    statistics: Array(),
+                    meta: {
+                      unit_of_measurement: "kW"
+                    }
+                  }
+                }
+                return vars.hours_to_show + "h"
+              }
+            title: Daily average gas usage for Central Heating
+            entities:
+              - entity: sensor.gas_consumed_for_ch
+                statistic: sum
+                name: 1day-average gas usage
+                yaxis: y1
+                filters:
+                  - resample: 1h
+                  - store_var: gas_sum
+                  - fn: >-
+                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum,
+                      24);}
+                  - store_var: gas_1d_daily_avg
+                x: $ex xs
+                "y": $ex ys
+              - entity: null
+                name: 1week-average gas usage
+                yaxis: y1
+                filters:
+                  - fn: >-
+                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum,
+                      7*24);}
+                  - store_var: gas_1w_daily_avg
+                x: $ex xs
+                "y": $ex ys
+              - entity: null
+                name: 1month-average gas usage
+                yaxis: y1
+                filters:
+                  - fn: >-
+                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum,
+                      31*24);}
+                  - store_var: gas_1m_daily_avg
+                x: $ex xs
+                "y": $ex ys
+              - entity: null
+                name: 6month-average gas usage
+                yaxis: y1
+                filters:
+                  - fn: >-
+                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum,
+                      182.5*24);}
+                  - store_var: gas_6m_daily_avg
+                x: $ex xs
+                "y": $ex ys
+              - entity: null
+                name: 1year-average gas usage
+                yaxis: y1
+                filters:
+                  - fn: >-
+                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum,
+                      365*24);}
+                  - store_var: gas_1y_daily_avg
+                x: $ex xs
+                "y": $ex ys
+              - entity: sensor.template_location_1_knmi_temperature
+                statistic: mean
+                name: 1day-daily average degreedays
+                yaxis: y2
+                filters:
+                  - resample: 1h
+                  - store_var: temp_raw
+                  - sliding_window_moving_average:
+                      window_size: 24
+                      centered: true
+                  - store_var: temp_1d_avg
+                  - map_y_numbers: |-
+                      {
+                        const base_temps = [
+                          [xs[0], 20.0],
+                          [new Date("2021-08-01 00:00:00Z"), 18.0],
+                          [new Date("2022-08-01 00:00:00Z"), 20.0],
+                          [new Date("2024-05-06 00:00:00Z"), 20.0]
+                        ]
+                        var j = 0;
+                        while (j < base_temps.length && base_temps[j][0] <= xs[i])
+                        {
+                          j += 1
+                        }
+                        return base_temps[j-1][1] - 2
+                      }
+                  - store_var: base_temp_1d
+                  - map_y_numbers: >-
+                      Math.max(vars.base_temp_1d.ys[i] - vars.temp_1d_avg.ys[i],
+                      0)
+                  - integrate: d
+                  - store_var: degday_sum
+                  - fn: >-
+                      ({vars}) => { return vars.get_daily_diff(vars.degday_sum,
+                      24) }
+                  - fn: >-
+                      ({vars}) => { return { meta: { unit_of_measurement: "°C" }
+                      } }
+                  - store_var: degday_1d_daily_avg
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+              - entity: null
+                name: 1week-daily average degreedays
+                yaxis: y2
+                filters:
+                  - fn: >-
+                      ({vars}) => { return vars.get_daily_diff(vars.degday_sum,
+                      7*24) }
+                  - fn: >-
+                      ({vars}) => { return { meta: { unit_of_measurement: "°C" }
+                      } }
+                  - store_var: degday_1w_daily_avg
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+              - entity: null
+                name: 1month-daily average degreedays
+                yaxis: y2
+                filters:
+                  - fn: >-
+                      ({vars}) => { return vars.get_daily_diff(vars.degday_sum,
+                      31*24) }
+                  - fn: >-
+                      ({vars}) => { return { meta: { unit_of_measurement: "°C" }
+                      } }
+                  - store_var: degday_1m_daily_avg
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+              - entity: null
+                name: 6month-daily average degreedays
+                yaxis: y2
+                filters:
+                  - fn: >-
+                      ({vars}) => { return vars.get_daily_diff(vars.degday_sum,
+                      182.5*24) }
+                  - fn: >-
+                      ({vars}) => { return { meta: { unit_of_measurement: "°C" }
+                      } }
+                  - store_var: degday_6m_daily_avg
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+              - entity: null
+                name: 1year-daily average degreedays
+                yaxis: y2
+                filters:
+                  - fn: >-
+                      ({vars}) => { return vars.get_daily_diff(vars.degday_sum,
+                      365*24) }
+                  - fn: >-
+                      ({vars}) => { return { meta: { unit_of_measurement: "°C" }
+                      } }
+                  - store_var: degday_1y_daily_avg
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+              - entity: null
+                name: 1day-daily average base temperature
+                yaxis: y2
+                filters:
+                  - load_var: base_temp_1d
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+              - entity: null
+                name: 1week-daily average base temperature
+                yaxis: y2
+                filters:
+                  - load_var: base_temp_1d
+                  - sliding_window_moving_average:
+                      window_size: $ex 7 * 24
+                      centered: true
+                  - store_var: base_temp_1w
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+              - entity: null
+                name: 1month-daily average base temperature
+                yaxis: y2
+                filters:
+                  - load_var: base_temp_1d
+                  - sliding_window_moving_average:
+                      window_size: $ex 31 * 24
+                      centered: true
+                  - store_var: base_temp_1m
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+              - entity: null
+                name: 6month-daily average base temperature
+                yaxis: y2
+                filters:
+                  - load_var: base_temp_1d
+                  - sliding_window_moving_average:
+                      window_size: $ex 182.5 * 24
+                      centered: true
+                  - store_var: base_temp_6m
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+              - entity: null
+                name: 1year-daily average base temperature
+                yaxis: y2
+                filters:
+                  - load_var: base_temp_1d
+                  - sliding_window_moving_average:
+                      window_size: $ex 365 * 24
+                      centered: true
+                  - store_var: base_temp_1y
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+              - entity: null
+                filters:
+                  - fn: ({vars}) => { return (vars.get_heat_loss(vars, "1d")) }
+                  - store_var: heat_loss_1d
+                yaxis: y3
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+                name: 1day average capacity
+                show_value: true
+              - entity: null
+                filters:
+                  - fn: ({vars}) => { return (vars.get_heat_loss(vars, "1w")) }
+                  - store_var: heat_loss_1w
+                yaxis: y3
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+                name: 1week average capacity
+                show_value: true
+              - entity: null
+                filters:
+                  - fn: ({vars}) => { return (vars.get_heat_loss(vars, "1m")) }
+                  - store_var: heat_loss_1m
+                yaxis: y3
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+                name: 1month average capacity
+                show_value: true
+              - entity: null
+                filters:
+                  - fn: ({vars}) => { return (vars.get_heat_loss(vars, "6m")) }
+                  - store_var: heat_loss_6m
+                yaxis: y3
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+                name: 6month average capacity
+                show_value: true
+              - entity: null
+                filters:
+                  - fn: ({vars}) => { return (vars.get_heat_loss(vars, "1y")) }
+                  - store_var: heat_loss_1y
+                yaxis: y3
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+                name: 1year average capacity
+                show_value: true
+            grid_options:
+              columns: full
+            refresh_interval: 1h
+            raw_plotly_config: true
+            color_scheme:
+              - "#1f77b4"
+              - "#ff7f0e"
+              - "#2ca02c"
+              - "#d62728"
+              - "#9467bd"
+            defaults:
+              entity:
+                line:
+                  width: 1
+                  color: |-
+                    $fn ({ getFromConfig, path }) => {
+                      const color_scheme = getFromConfig("color_scheme");
+                      const t1 = path.match(/entities\.(\d+)/)
+                      const t2 = t1[1]
+                      return color_scheme[t2 % color_scheme.length];
+                    }
+              yaxes:
+                side: left
+                overlaying: "y"
+                visible: true
+                showgrid: true
+                nticks: 6
+            layout:
+              dragmode: pan
+              margin:
+                t: 30
+                l: 45
+                r: 30
+                b: 50
+              height: 1200
+              grid:
+                rows: 4
+                columns: 1
+                pattern: coupled
+                roworder: top to bottom
+              legend:
+                orientation: h
+              yaxis3:
+                range:
+                  - 0
+                  - 5
+        column_span: 4
+    cards: []
+title: Central heating Long-Term
