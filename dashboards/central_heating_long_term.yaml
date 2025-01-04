@@ -22,7 +22,7 @@ views:
                   for (var i = window_size; i < sum_var.ys.length; ++i)
                   {
                     ysn[i-window_size] = 24*(sum_var.ys[i] - sum_var.ys[i-window_size]) / window_size
-                    xsn[i-window_size] = sum_var.xs[i - half_window_size]
+                    xsn[i-window_size] = sum_var.xs[i]
                   }
                   return {
                     xs: xsn,
@@ -127,7 +127,7 @@ views:
                   - store_var: temp_raw
                   - sliding_window_moving_average:
                       window_size: 24
-                      centered: true
+                      centered: false
                   - store_var: temp_1d_avg
                   - map_y_numbers: |-
                       {
@@ -231,7 +231,7 @@ views:
                   - load_var: base_temp_1d
                   - sliding_window_moving_average:
                       window_size: $ex 7 * 24
-                      centered: true
+                      centered: false
                   - store_var: base_temp_1w
                 x: $ex xs
                 "y": $ex ys
@@ -243,7 +243,7 @@ views:
                   - load_var: base_temp_1d
                   - sliding_window_moving_average:
                       window_size: $ex 31 * 24
-                      centered: true
+                      centered: false
                   - store_var: base_temp_1m
                 x: $ex xs
                 "y": $ex ys
@@ -255,7 +255,7 @@ views:
                   - load_var: base_temp_1d
                   - sliding_window_moving_average:
                       window_size: $ex 182.5 * 24
-                      centered: true
+                      centered: false
                   - store_var: base_temp_6m
                 x: $ex xs
                 "y": $ex ys
@@ -267,7 +267,7 @@ views:
                   - load_var: base_temp_1d
                   - sliding_window_moving_average:
                       window_size: $ex 365 * 24
-                      centered: true
+                      centered: false
                   - store_var: base_temp_1y
                 x: $ex xs
                 "y": $ex ys
