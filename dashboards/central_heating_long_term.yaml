@@ -61,6 +61,143 @@ views:
                     }
                   }
                 }
+                vars.get_heat_loss_model_fit = (vars, nr_hrs) => {
+                  var t0a = Array()
+                  var La = Array()
+                  var Ma = Array()
+                  var xa = Array()
+                  var r2a = Array()
+                  // Model: G(t) = M + L*max(t0 - t, 0)
+                  // G(t) = modeled/expected gas usage during 24 hours where t is the average outside temperature of those 24 hours.
+                  // M  = "miscellaneous" gas usage, e.g. for domestic hot water, cooking, etc.
+                  // t0 = "cut-off" temperature. Temperature above which no heating should be necessary anymore.
+                  // L  = "heat loss", the amount of gas usage per degree day.
+
+                  const name_gas_var = "gas_1d_daily_avg"
+                  const name_temp_var = "temp_1d_avg"
+
+                  const n0 = vars[name_gas_var].ys.length
+                  const n1 = vars[name_temp_var].ys.length
+                  const N = Math.min(n0, n1)
+
+                  var data = Array()
+                  for (var i = 0; i < N; ++i)
+                  {
+                    data[i] = [vars[name_temp_var].ys[n1 - N + i], vars[name_gas_var].ys[n0 - N + i]]
+                  }
+
+                  var T01 = Array()
+                  var T02 = Array()
+
+                  for (var i = 0; i < N - nr_hrs; ++i)
+                  {
+                    xa[i] = vars[name_gas_var].xs[n0 - N + i + nr_hrs]
+                    const data_sub = data.slice(i, i + nr_hrs).toSorted(
+                      (d0, d1) => {
+                        return d0[0] - d1[0]
+                      }
+                    )
+                    var t01 = 0.0
+                    var t02 = 0.0
+                    const t00 = nr_hrs
+                    for (var j = 0; j < nr_hrs; ++j)
+                    {
+                      const y = data_sub[j][1]
+                      t01 += y
+                      t02 += y * y
+                    }
+
+                    T01[i] = t01
+                    T02[i] = t02
+
+                    var s10 = 0.0
+                    var s20 = 0.0
+                    var s01 = 0.0
+                    var s11 = 0.0
+                    var x_next = data_sub[0][0]
+
+                    var min_r2 = -1.0
+                    var t0_opt = parseFloat("nan")
+                    var L_opt = t0_opt
+                    var M_opt = t0_opt
+                    for (var j = 0; j < nr_hrs; ++j)
+                    {
+                      const s00 = j + 1
+                      const x = x_next
+                      x_next = (j + 1 < nr_hrs) ? data_sub[j+1][0] : 0.0 / 0.0
+                      const y = data_sub[j][1]
+                      s10 += x
+                      s20 += x * x
+                      s01 += y
+                      s11 += x * y
+
+                      const c = t01 - s01
+
+                      const det = s10*s10 - s00*s20
+
+                      const M = j < t00 ? c / (t00 - j) : 0.0
+                      const L =  ( - s01 * s10 + s00 * s11) / det
+                      const t0 = (M * s00 * s20 - M * s10 * s10 - s01 * s20 + s10 * s11) / det / L
+
+                      if (t0 >= x && t0 <= x_next)
+                      {
+                        const r2 = t02 - 2*M*t01 + t00*M*M - 2*L*t0*s01 + 2*L*s11 + 2*M*L*t0*s00 - 2*M*L*s10 + L*L*t0*t0*s00 - 2*L*L*t0*s10 + L*L*s20
+
+                        if (min_r2 < 0.0 || r2 < min_r2)
+                        {
+                          min_r2 = r2
+                          t0_opt = t0
+                          L_opt = L
+                          M_opt = M
+                        }
+                      }
+                    }
+
+                    t0a[i] = t0_opt
+                    La[i] = L_opt
+                    Ma[i] = M_opt
+                    r2a[i] = min_r2
+                  }
+
+                  return {
+                    xs: xa,
+                    ys: La,
+                    states: Array(),
+                    statistics: Array(),
+                    meta: {
+                      t0: t0a,
+                      M: Ma,
+                      r2: r2a,
+                      T01: T01,
+                      T02: T02,
+                      unit_of_measurement: "m³/°Cd"
+                    }
+                  }
+                }
+                vars.restore_heat_loss_model_fit = (vars, name_suffix, nr_hrs) =>
+                {
+                  const n0 = vars.temp_1d_avg.ys.length
+                  const n1 = vars.gas_1d_daily_avg.ys.length
+                  const N = Math.min(n0, n1)
+
+                  const e = N - nr_hrs
+
+                  const name = "heat_loss_model_" + name_suffix
+
+                  if (name in window && window[name].ys.length == e)
+                  {
+                    console.log("Do not recalculate heat loss '" + name + "'")
+                    return window[name]
+                  }
+                  else
+                  {
+                    console.log("Recalculate heat loss '" + name + "': " + (name in window) + " : " + (name in window ? window[name].ys.length : -1) + " : " + (e))
+                    const data = vars.get_heat_loss_model_fit(vars, nr_hrs)
+                    console.log(data)
+                    window[name] = data
+                    return data
+                  }
+                }
                 return vars.hours_to_show + "h"
               }
             title: Daily average gas usage for Central Heating
@@ -322,6 +459,182 @@ views:
                 unit_of_measurement: $ex meta.unit_of_measurement
                 name: 1year average capacity
                 show_value: true
+              - entity: null
+                internal: true
+                yaxis: y4
+              - entity: null
+                filters:
+                  - fn: |-
+                      ({vars}) => {
+                        return vars.restore_heat_loss_model_fit(vars, "1w", 7*24)
+                      }
+                  - store_var: heat_loss_model_1w
+                yaxis: y4
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+                name: 1week modelled heat loss
+                show_value: true
+              - entity: null
+                filters:
+                  - fn: |-
+                      ({vars}) => {
+                        return vars.restore_heat_loss_model_fit(vars, "1m", 30*24)
+                      }
+                  - store_var: heat_loss_model_1m
+                yaxis: y4
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+                name: 1month modelled heat loss
+                show_value: true
+              - entity: null
+                filters:
+                  - fn: |-
+                      ({vars}) => {
+                        return vars.restore_heat_loss_model_fit(vars, "6m", 365/2*24)
+                      }
+                  - store_var: heat_loss_model_6m
+                yaxis: y4
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+                name: 6month modelled heat loss
+                show_value: true
+              - entity: null
+                filters:
+                  - fn: |-
+                      ({vars}) => {
+                        return vars.restore_heat_loss_model_fit(vars, "1y", 365*24)
+                      }
+                  - store_var: heat_loss_model_1y
+                yaxis: y4
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: $ex meta.unit_of_measurement
+                name: 1year modelled heat loss
+                show_value: true
+              - entity: null
+                internal: true
+                yaxis: y5
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_1w
+                yaxis: y5
+                x: $ex xs
+                "y": $ex meta.t0
+                unit_of_measurement: "°C"
+                name: 1week modeled base temp
+                show_value: true
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_1m
+                yaxis: y5
+                x: $ex xs
+                "y": $ex meta.t0
+                unit_of_measurement: "°C"
+                name: 1month modeled base temp
+                show_value: true
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_6m
+                yaxis: y5
+                x: $ex xs
+                "y": $ex meta.t0
+                unit_of_measurement: "°C"
+                name: 6month modeled base temp
+                show_value: true
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_1y
+                yaxis: y5
+                x: $ex xs
+                "y": $ex meta.t0
+                unit_of_measurement: "°C"
+                name: 1year modeled base temp
+                show_value: true
+              - entity: null
+                internal: true
+                yaxis: y6
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_1w
+                yaxis: y6
+                x: $ex xs
+                "y": $ex meta.M
+                unit_of_measurement: "m³"
+                name: 1week modeled miscellaneous gas use
+                show_value: true
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_1m
+                yaxis: y6
+                x: $ex xs
+                "y": $ex meta.M
+                unit_of_measurement: "m³"
+                name: 1month modeled miscellaneous gas use
+                show_value: true
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_6m
+                yaxis: y6
+                x: $ex xs
+                "y": $ex meta.M
+                unit_of_measurement: "m³"
+                name: 6month modeled miscellaneous gas use
+                show_value: true
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_1y
+                yaxis: y6
+                x: $ex xs
+                "y": $ex meta.M
+                unit_of_measurement: "m³"
+                name: 1year modeled miscellaneous gas use
+                show_value: true
+              - entity: null
+                internal: true
+                yaxis: y7
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_1w
+                  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
+                yaxis: y7
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: "kW"
+                name: 1week modelled capacity
+                show_value: true
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_1m
+                  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
+                yaxis: y7
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: "kW"
+                name: 1month modelled capacity
+                show_value: true
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_6m
+                  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
+                yaxis: y7
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: "kW"
+                name: 6month modelled capacity
+                show_value: true
+              - entity: null
+                filters:
+                  - load_var: heat_loss_model_1y
+                  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
+                yaxis: y7
+                x: $ex xs
+                "y": $ex ys
+                unit_of_measurement: "kW"
+                name: 1year modelled capacity
+                show_value: true
             grid_options:
               columns: full
             refresh_interval: 1h
@@ -356,9 +669,9 @@ views:
                 l: 45
                 r: 30
                 b: 50
-              height: 1200
+              height: 1800
               grid:
-                rows: 4
+                rows: 7
                 columns: 1
                 pattern: coupled
                 roworder: top to bottom
