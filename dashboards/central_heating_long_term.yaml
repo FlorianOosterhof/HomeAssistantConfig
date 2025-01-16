@@ -61,12 +61,16 @@ views:
                     }
                   }
                 }
+                vars.clamp = (val, min, max) =>
+                {
+                  return Math.min(max, Math.max(min, val));
+                }
                 vars.get_heat_loss_model_fit = (vars, nr_hrs) => {
                   var t0a = Array()
                   var La = Array()
                   var Ma = Array()
                   var xa = Array()
-                  var r2a = Array()
+                  var ssresa = Array()
                   // Model: G(t) = M + L*max(t0 - t, 0)
                   // G(t) = modeled/expected gas usage during 24 hours where t is the average outside temperature of those 24 hours.
                   // M  = "miscellaneous" gas usage, e.g. for domestic hot water, cooking, etc.
@@ -116,10 +120,11 @@ views:
                     var s11 = 0.0
                     var x_next = data_sub[0][0]
 
-                    var min_r2 = -1.0
-                    var t0_opt = parseFloat("nan")
+                    var min_ssres = 1.0 / 0.0 // inf
+                    var t0_opt = 0.0 / 0.0 // nan
                     var L_opt = t0_opt
                     var M_opt = t0_opt
+
                     for (var j = 0; j < nr_hrs; ++j)
                     {
                       const s00 = j + 1
@@ -134,29 +139,38 @@ views:
                       const c = t01 - s01
 
                       const det = s10*s10 - s00*s20
+                      // By Sedrakyan's lemma det <= 0 and == 0 if and only if all xi are equal.
+                      // If det >= 0.0 the det == 0.0
+                      if (det >= 0.0)
+                      {
+                        continue
+                      }
 
                       const M = j < t00 ? c / (t00 - j) : 0.0
-                      const L =  ( - s01 * s10 + s00 * s11) / det
-                      const t0 = (M * s00 * s20 - M * s10 * s10 - s01 * s20 + s10 * s11) / det / L
+                      const L_num = s00 * s11 - s01 * s10
+                      const L =  L_num / det
 
-                      if (t0 >= x && t0 <= x_next)
+                      // t0 = (...) / det / L = (...) / (L * det) = (...) / L_num
+                      // Since we look at the interval [x, x_next] for t0, the minimum is attained either where
+                      // derivative = 0 or at the boundary closest to that point. So clamp between [x, x_next]
+                      const t0_orig = (M * s00 * s20 - M * s10 * s10 - s01 * s20 + s10 * s11) / L_num
+                      const t0 = vars.clamp(t0_orig, x, x_next)
+
+                      const ssres = t02 - 2*M*t01 + t00*M*M - 2*L*t0*s01 + 2*L*s11 + 2*M*L*t0*s00 - 2*M*L*s10 + L*L*t0*t0*s00 - 2*L*L*t0*s10 + L*L*s20
+
+                      if (ssres < min_ssres)
                       {
-                        const r2 = t02 - 2*M*t01 + t00*M*M - 2*L*t0*s01 + 2*L*s11 + 2*M*L*t0*s00 - 2*M*L*s10 + L*L*t0*t0*s00 - 2*L*L*t0*s10 + L*L*s20
-
-                        if (min_r2 < 0.0 || r2 < min_r2)
-                        {
-                          min_r2 = r2
-                          t0_opt = t0
-                          L_opt = L
-                          M_opt = M
-                        }
+                        min_ssres = ssres
+                        t0_opt = t0
+                        L_opt = L
+                        M_opt = M
                       }
                     }
 
                     t0a[i] = t0_opt
                     La[i] = L_opt
                     Ma[i] = M_opt
-                    r2a[i] = min_r2
+                    ssresa[i] = min_ssres
                   }
 
                   return {
@@ -167,7 +181,7 @@ views:
                     meta: {
                       t0: t0a,
                       M: Ma,
-                      r2: r2a,
+                      ssres: ssresa,
                       T01: T01,
                       T02: T02,
                       unit_of_measurement: "m³/°Cd"
