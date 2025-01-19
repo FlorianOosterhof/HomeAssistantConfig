@@ -477,44 +477,47 @@ views:
                 internal: true
                 yaxis: y4
               - entity: null
-                filters:
-                  - fn: |-
-                      ({vars}) => {
-                        return vars.restore_heat_loss_model_fit(vars, "1w", 7*24)
-                      }
-                  - store_var: heat_loss_model_1w
-                yaxis: y4
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-                name: 1week modelled heat loss
-                show_value: true
+                #filters:
+                #  - fn: |-
+                #      ({vars}) => {
+                #        return vars.restore_heat_loss_model_fit(vars, "1w", 7*24)
+                #      }
+                #  - store_var: heat_loss_model_1w
+                #yaxis: y4
+                #x: $ex xs
+                #"y": $ex ys
+                #unit_of_measurement: $ex meta.unit_of_measurement
+                #name: 1week modelled heat loss
+                #show_value: true
+                internal: true
               - entity: null
-                filters:
-                  - fn: |-
-                      ({vars}) => {
-                        return vars.restore_heat_loss_model_fit(vars, "1m", 30*24)
-                      }
-                  - store_var: heat_loss_model_1m
-                yaxis: y4
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-                name: 1month modelled heat loss
-                show_value: true
+                #filters:
+                #  - fn: |-
+                #      ({vars}) => {
+                #        return vars.restore_heat_loss_model_fit(vars, "1m", 30*24)
+                #      }
+                #  - store_var: heat_loss_model_1m
+                #yaxis: y4
+                #x: $ex xs
+                #"y": $ex ys
+                #unit_of_measurement: $ex meta.unit_of_measurement
+                #name: 1month modelled heat loss
+                #show_value: true
+                internal: true
               - entity: null
-                filters:
-                  - fn: |-
-                      ({vars}) => {
-                        return vars.restore_heat_loss_model_fit(vars, "6m", 365/2*24)
-                      }
-                  - store_var: heat_loss_model_6m
-                yaxis: y4
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-                name: 6month modelled heat loss
-                show_value: true
+                #filters:
+                #  - fn: |-
+                #      ({vars}) => {
+                #        return vars.restore_heat_loss_model_fit(vars, "6m", 365/2*24)
+                #      }
+                #  - store_var: heat_loss_model_6m
+                #yaxis: y4
+                #x: $ex xs
+                #"y": $ex ys
+                #unit_of_measurement: $ex meta.unit_of_measurement
+                #name: 6month modelled heat loss
+                #show_value: true
+                internal: true
               - entity: null
                 filters:
                   - fn: |-
@@ -525,39 +528,42 @@ views:
                 yaxis: y4
                 x: $ex xs
                 "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
+                unit_of_measurement: "m³/°Cd"
                 name: 1year modelled heat loss
                 show_value: true
               - entity: null
                 internal: true
                 yaxis: y5
               - entity: null
-                filters:
-                  - load_var: heat_loss_model_1w
-                yaxis: y5
-                x: $ex xs
-                "y": $ex meta.t0
-                unit_of_measurement: "°C"
-                name: 1week modeled base temp
-                show_value: true
+                #filters:
+                #  - load_var: heat_loss_model_1w
+                #yaxis: y5
+                #x: $ex xs
+                #"y": $ex meta.t0
+                #unit_of_measurement: "°C"
+                #name: 1week modeled base temp
+                #show_value: true
+                internal: true
               - entity: null
-                filters:
-                  - load_var: heat_loss_model_1m
-                yaxis: y5
-                x: $ex xs
-                "y": $ex meta.t0
-                unit_of_measurement: "°C"
-                name: 1month modeled base temp
-                show_value: true
+                #filters:
+                #  - load_var: heat_loss_model_1m
+                #yaxis: y5
+                #x: $ex xs
+                #"y": $ex meta.t0
+                #unit_of_measurement: "°C"
+                #name: 1month modeled base temp
+                #show_value: true
+                internal: true
               - entity: null
-                filters:
-                  - load_var: heat_loss_model_6m
-                yaxis: y5
-                x: $ex xs
-                "y": $ex meta.t0
-                unit_of_measurement: "°C"
-                name: 6month modeled base temp
-                show_value: true
+                #filters:
+                #  - load_var: heat_loss_model_6m
+                #yaxis: y5
+                #x: $ex xs
+                #"y": $ex meta.t0
+                #unit_of_measurement: "°C"
+                #name: 6month modeled base temp
+                #show_value: true
+                internal: true
               - entity: null
                 filters:
                   - load_var: heat_loss_model_1y
@@ -571,32 +577,35 @@ views:
                 internal: true
                 yaxis: y6
               - entity: null
-                filters:
-                  - load_var: heat_loss_model_1w
-                yaxis: y6
-                x: $ex xs
-                "y": $ex meta.M
-                unit_of_measurement: "m³"
-                name: 1week modeled miscellaneous gas use
-                show_value: true
+                #filters:
+                #  - load_var: heat_loss_model_1w
+                #yaxis: y6
+                #x: $ex xs
+                #"y": $ex meta.M
+                #unit_of_measurement: "m³"
+                #name: 1week modeled miscellaneous gas use
+                #show_value: true
+                internal: true
               - entity: null
-                filters:
-                  - load_var: heat_loss_model_1m
-                yaxis: y6
-                x: $ex xs
-                "y": $ex meta.M
-                unit_of_measurement: "m³"
-                name: 1month modeled miscellaneous gas use
-                show_value: true
+                #filters:
+                #  - load_var: heat_loss_model_1m
+                #yaxis: y6
+                #x: $ex xs
+                #"y": $ex meta.M
+                #unit_of_measurement: "m³"
+                #name: 1month modeled miscellaneous gas use
+                #show_value: true
+                internal: true
               - entity: null
-                filters:
-                  - load_var: heat_loss_model_6m
-                yaxis: y6
-                x: $ex xs
-                "y": $ex meta.M
-                unit_of_measurement: "m³"
-                name: 6month modeled miscellaneous gas use
-                show_value: true
+                #filters:
+                #  - load_var: heat_loss_model_6m
+                #yaxis: y6
+                #x: $ex xs
+                #"y": $ex meta.M
+                #unit_of_measurement: "m³"
+                #name: 6month modeled miscellaneous gas use
+                #show_value: true
+                internal: true
               - entity: null
                 filters:
                   - load_var: heat_loss_model_1y
@@ -610,35 +619,38 @@ views:
                 internal: true
                 yaxis: y7
               - entity: null
-                filters:
-                  - load_var: heat_loss_model_1w
-                  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
-                yaxis: y7
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: "kW"
-                name: 1week modelled capacity
-                show_value: true
+                #filters:
+                #  - load_var: heat_loss_model_1w
+                #  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
+                #yaxis: y7
+                #x: $ex xs
+                #"y": $ex ys
+                #unit_of_measurement: "kW"
+                #name: 1week modelled capacity
+                #show_value: true
+                internal: true
               - entity: null
-                filters:
-                  - load_var: heat_loss_model_1m
-                  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
-                yaxis: y7
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: "kW"
-                name: 1month modelled capacity
-                show_value: true
+                #filters:
+                #  - load_var: heat_loss_model_1m
+                #  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
+                #yaxis: y7
+                #x: $ex xs
+                #"y": $ex ys
+                #unit_of_measurement: "kW"
+                #name: 1month modelled capacity
+                #show_value: true
+                internal: true
               - entity: null
-                filters:
-                  - load_var: heat_loss_model_6m
-                  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
-                yaxis: y7
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: "kW"
-                name: 6month modelled capacity
-                show_value: true
+                #filters:
+                #  - load_var: heat_loss_model_6m
+                #  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
+                #yaxis: y7
+                #x: $ex xs
+                #"y": $ex ys
+                #unit_of_measurement: "kW"
+                #name: 6month modelled capacity
+                #show_value: true
+                internal: true
               - entity: null
                 filters:
                   - load_var: heat_loss_model_1y
