@@ -35,32 +35,6 @@ views:
                     }
                   }
                 }
-                vars.get_heat_loss = (vars, time) => {
-                  var xsn = Array()
-                  var ysn = Array()
-
-                  const energy = vars["gas_" + time + "_daily_avg"]
-                  const degdays = vars["degday_" + time + "_daily_avg"]
-                  const base_temps = vars["base_temp_" + time]
-                  const n0 = energy.ys.length
-                  const n1 = degdays.ys.length
-                  const N = Math.min(n0, n1)
-                  for (var i = 0; i < N; ++i)
-                  {
-                    xsn[i] = energy.xs[i + n0 - N];
-                    ysn[i] = energy.ys[i + n0 - N] * 8.8 / (degdays.ys[i + n1 - N] * 20) * (base_temps.ys[i + n1 - N] + 10);
-                  }
-                  const old_unit = "m³/°Cd"
-                  return {
-                    xs: xsn,
-                    ys: ysn,
-                    states: Array(),
-                    statistics: Array(),
-                    meta: {
-                      unit_of_measurement: "kW"
-                    }
-                  }
-                }
                 vars.clamp = (val, min, max) =>
                 {
                   return Math.min(max, Math.max(min, val));
@@ -424,58 +398,8 @@ views:
                 "y": $ex ys
                 unit_of_measurement: $ex meta.unit_of_measurement
               - entity: null
-                filters:
-                  - fn: ({vars}) => { return (vars.get_heat_loss(vars, "1d")) }
-                  - store_var: heat_loss_1d
-                yaxis: y3
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-                name: 1day average capacity
-                show_value: true
-              - entity: null
-                filters:
-                  - fn: ({vars}) => { return (vars.get_heat_loss(vars, "1w")) }
-                  - store_var: heat_loss_1w
-                yaxis: y3
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-                name: 1week average capacity
-                show_value: true
-              - entity: null
-                filters:
-                  - fn: ({vars}) => { return (vars.get_heat_loss(vars, "1m")) }
-                  - store_var: heat_loss_1m
-                yaxis: y3
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-                name: 1month average capacity
-                show_value: true
-              - entity: null
-                filters:
-                  - fn: ({vars}) => { return (vars.get_heat_loss(vars, "6m")) }
-                  - store_var: heat_loss_6m
-                yaxis: y3
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-                name: 6month average capacity
-                show_value: true
-              - entity: null
-                filters:
-                  - fn: ({vars}) => { return (vars.get_heat_loss(vars, "1y")) }
-                  - store_var: heat_loss_1y
-                yaxis: y3
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-                name: 1year average capacity
-                show_value: true
-              - entity: null
                 internal: true
-                yaxis: y4
+                yaxis: y3
               - entity: null
                 #filters:
                 #  - fn: |-
@@ -483,7 +407,7 @@ views:
                 #        return vars.restore_heat_loss_model_fit(vars, "1w", 7*24)
                 #      }
                 #  - store_var: heat_loss_model_1w
-                #yaxis: y4
+                #yaxis: y3
                 #x: $ex xs
                 #"y": $ex ys
                 #unit_of_measurement: $ex meta.unit_of_measurement
@@ -497,7 +421,7 @@ views:
                 #        return vars.restore_heat_loss_model_fit(vars, "1m", 30*24)
                 #      }
                 #  - store_var: heat_loss_model_1m
-                #yaxis: y4
+                #yaxis: y3
                 #x: $ex xs
                 #"y": $ex ys
                 #unit_of_measurement: $ex meta.unit_of_measurement
@@ -511,7 +435,7 @@ views:
                 #        return vars.restore_heat_loss_model_fit(vars, "6m", 365/2*24)
                 #      }
                 #  - store_var: heat_loss_model_6m
-                #yaxis: y4
+                #yaxis: y3
                 #x: $ex xs
                 #"y": $ex ys
                 #unit_of_measurement: $ex meta.unit_of_measurement
@@ -525,7 +449,7 @@ views:
                         return vars.restore_heat_loss_model_fit(vars, "1y", 365*24)
                       }
                   - store_var: heat_loss_model_1y
-                yaxis: y4
+                yaxis: y3
                 x: $ex xs
                 "y": $ex ys
                 unit_of_measurement: "m³/°Cd"
@@ -533,11 +457,11 @@ views:
                 show_value: true
               - entity: null
                 internal: true
-                yaxis: y5
+                yaxis: y4
               - entity: null
                 #filters:
                 #  - load_var: heat_loss_model_1w
-                #yaxis: y5
+                #yaxis: y4
                 #x: $ex xs
                 #"y": $ex meta.t0
                 #unit_of_measurement: "°C"
@@ -547,7 +471,7 @@ views:
               - entity: null
                 #filters:
                 #  - load_var: heat_loss_model_1m
-                #yaxis: y5
+                #yaxis: y4
                 #x: $ex xs
                 #"y": $ex meta.t0
                 #unit_of_measurement: "°C"
@@ -557,7 +481,7 @@ views:
               - entity: null
                 #filters:
                 #  - load_var: heat_loss_model_6m
-                #yaxis: y5
+                #yaxis: y4
                 #x: $ex xs
                 #"y": $ex meta.t0
                 #unit_of_measurement: "°C"
@@ -567,7 +491,7 @@ views:
               - entity: null
                 filters:
                   - load_var: heat_loss_model_1y
-                yaxis: y5
+                yaxis: y4
                 x: $ex xs
                 "y": $ex meta.t0
                 unit_of_measurement: "°C"
@@ -575,11 +499,11 @@ views:
                 show_value: true
               - entity: null
                 internal: true
-                yaxis: y6
+                yaxis: y5
               - entity: null
                 #filters:
                 #  - load_var: heat_loss_model_1w
-                #yaxis: y6
+                #yaxis: y5
                 #x: $ex xs
                 #"y": $ex meta.M
                 #unit_of_measurement: "m³"
@@ -589,7 +513,7 @@ views:
               - entity: null
                 #filters:
                 #  - load_var: heat_loss_model_1m
-                #yaxis: y6
+                #yaxis: y5
                 #x: $ex xs
                 #"y": $ex meta.M
                 #unit_of_measurement: "m³"
@@ -599,7 +523,7 @@ views:
               - entity: null
                 #filters:
                 #  - load_var: heat_loss_model_6m
-                #yaxis: y6
+                #yaxis: y5
                 #x: $ex xs
                 #"y": $ex meta.M
                 #unit_of_measurement: "m³"
@@ -609,7 +533,7 @@ views:
               - entity: null
                 filters:
                   - load_var: heat_loss_model_1y
-                yaxis: y6
+                yaxis: y5
                 x: $ex xs
                 "y": $ex meta.M
                 unit_of_measurement: "m³"
@@ -617,12 +541,12 @@ views:
                 show_value: true
               - entity: null
                 internal: true
-                yaxis: y7
+                yaxis: y6
               - entity: null
                 #filters:
                 #  - load_var: heat_loss_model_1w
                 #  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
-                #yaxis: y7
+                #yaxis: y6
                 #x: $ex xs
                 #"y": $ex ys
                 #unit_of_measurement: "kW"
@@ -633,7 +557,7 @@ views:
                 #filters:
                 #  - load_var: heat_loss_model_1m
                 #  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
-                #yaxis: y7
+                #yaxis: y6
                 #x: $ex xs
                 #"y": $ex ys
                 #unit_of_measurement: "kW"
@@ -644,7 +568,7 @@ views:
                 #filters:
                 #  - load_var: heat_loss_model_6m
                 #  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
-                #yaxis: y7
+                #yaxis: y6
                 #x: $ex xs
                 #"y": $ex ys
                 #unit_of_measurement: "kW"
@@ -655,7 +579,7 @@ views:
                 filters:
                   - load_var: heat_loss_model_1y
                   - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
-                yaxis: y7
+                yaxis: y6
                 x: $ex xs
                 "y": $ex ys
                 unit_of_measurement: "kW"
@@ -697,16 +621,12 @@ views:
                 b: 50
               height: 1800
               grid:
-                rows: 7
+                rows: 6
                 columns: 1
                 pattern: coupled
                 roworder: top to bottom
               legend:
                 orientation: h
-              yaxis3:
-                range:
-                  - 0
-                  - 5
         column_span: 4
     cards: []
 title: Central heating Long-Term
