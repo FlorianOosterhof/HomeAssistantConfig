@@ -124,7 +124,9 @@ views:
                       const L_num = s00 * s11 - s01 * s10
                       const L =  L_num / det
 
-                      // t0 = (...) / det / L = (...) / (L * det) = (...) / L_num
+                      // t0 = (...) / det / L
+                      //    = (...) / (L * det)
+                      //    = (...) / L_num
                       // Since we look at the interval [x, x_next] for t0, the minimum is attained either where
                       // derivative = 0 or at the boundary closest to that point. So clamp between [x, x_next]
                       const t0_orig = (M * s00 * s20 - M * s10 * s10 - s01 * s20 + s10 * s11) / L_num
@@ -198,8 +200,7 @@ views:
                   - resample: 1h
                   - store_var: gas_sum
                   - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum,
-                      24);}
+                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum, 24);}
                   - store_var: gas_1d_daily_avg
                 x: $ex xs
                 "y": $ex ys
@@ -208,8 +209,7 @@ views:
                 yaxis: y1
                 filters:
                   - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum,
-                      7*24);}
+                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum, 7*24);}
                   - store_var: gas_1w_daily_avg
                 x: $ex xs
                 "y": $ex ys
@@ -218,8 +218,7 @@ views:
                 yaxis: y1
                 filters:
                   - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum,
-                      31*24);}
+                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum, 31*24);}
                   - store_var: gas_1m_daily_avg
                 x: $ex xs
                 "y": $ex ys
@@ -228,8 +227,7 @@ views:
                 yaxis: y1
                 filters:
                   - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum,
-                      182.5*24);}
+                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum, 182.5*24);}
                   - store_var: gas_6m_daily_avg
                 x: $ex xs
                 "y": $ex ys
@@ -238,8 +236,7 @@ views:
                 yaxis: y1
                 filters:
                   - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum,
-                      365*24);}
+                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum, 365*24);}
                   - store_var: gas_1y_daily_avg
                 x: $ex xs
                 "y": $ex ys
