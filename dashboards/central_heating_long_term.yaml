@@ -52,7 +52,7 @@ views:
                   // L  = "heat loss", the amount of gas usage per degree day.
 
                   const name_gas_var = "gas_1d_daily_avg"
-                  const name_temp_var = "temp_1d_avg"
+                  const name_temp_var = "temp_1d_daily_avg"
 
                   const n0 = vars[name_gas_var].ys.length
                   const n1 = vars[name_temp_var].ys.length
@@ -166,7 +166,7 @@ views:
                 }
                 vars.restore_heat_loss_model_fit = (vars, name_suffix, nr_hrs) =>
                 {
-                  const n0 = vars.temp_1d_avg.ys.length
+                  const n0 = vars.temp_1d_daily_avg.ys.length
                   const n1 = vars.gas_1d_daily_avg.ys.length
                   const N = Math.min(n0, n1)
 
@@ -242,158 +242,55 @@ views:
                 "y": $ex ys
               - entity: sensor.template_location_1_knmi_temperature
                 statistic: mean
-                name: 1day-daily average degreedays
+                name: 1day-average outside temperature
                 yaxis: y2
                 filters:
                   - resample: 1h
-                  - store_var: temp_raw
-                  - sliding_window_moving_average:
-                      window_size: 24
-                      centered: false
-                  - store_var: temp_1d_avg
-                  - map_y_numbers: |-
-                      {
-                        const base_temps = [
-                          [xs[0], 20.0],
-                          [new Date("2021-08-01 00:00:00Z"), 18.0],
-                          [new Date("2022-08-01 00:00:00Z"), 20.0],
-                          [new Date("2024-05-06 00:00:00Z"), 20.0]
-                        ]
-                        var j = 0;
-                        while (j < base_temps.length && base_temps[j][0] <= xs[i])
-                        {
-                          j += 1
-                        }
-                        return base_temps[j-1][1] - 2
-                      }
-                  - store_var: base_temp_1d
-                  - map_y_numbers: >-
-                      Math.max(vars.base_temp_1d.ys[i] - vars.temp_1d_avg.ys[i],
-                      0)
                   - integrate: d
-                  - store_var: degday_sum
+                  - store_var: temp_sum
                   - fn: >-
-                      ({vars}) => { return vars.get_daily_diff(vars.degday_sum,
-                      24) }
+                      ({vars}) => {return vars.get_daily_diff(vars.temp_sum, 24);}
                   - fn: >-
-                      ({vars}) => { return { meta: { unit_of_measurement: "°C" }
-                      } }
-                  - store_var: degday_1d_daily_avg
+                      ({vars}) => { return { meta: {unit_of_measurement: "°C" } } }
+                  - store_var: temp_1d_daily_avg
                 x: $ex xs
                 "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
               - entity: null
-                name: 1week-daily average degreedays
+                name: 1week-average outside temperature
                 yaxis: y2
                 filters:
                   - fn: >-
-                      ({vars}) => { return vars.get_daily_diff(vars.degday_sum,
-                      7*24) }
-                  - fn: >-
-                      ({vars}) => { return { meta: { unit_of_measurement: "°C" }
-                      } }
-                  - store_var: degday_1w_daily_avg
+                      ({vars}) => {return vars.get_daily_diff(vars.temp_sum, 7*24);}
+                  - store_var: temp_1w_daily_avg
                 x: $ex xs
                 "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
               - entity: null
-                name: 1month-daily average degreedays
+                name: 1month-average outside temperature
                 yaxis: y2
                 filters:
                   - fn: >-
-                      ({vars}) => { return vars.get_daily_diff(vars.degday_sum,
-                      31*24) }
-                  - fn: >-
-                      ({vars}) => { return { meta: { unit_of_measurement: "°C" }
-                      } }
-                  - store_var: degday_1m_daily_avg
+                      ({vars}) => {return vars.get_daily_diff(vars.temp_sum, 31*24);}
+                  - store_var: temp_1m_daily_avg
                 x: $ex xs
                 "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
               - entity: null
-                name: 6month-daily average degreedays
+                name: 6month-average outside temperature
                 yaxis: y2
                 filters:
                   - fn: >-
-                      ({vars}) => { return vars.get_daily_diff(vars.degday_sum,
-                      182.5*24) }
-                  - fn: >-
-                      ({vars}) => { return { meta: { unit_of_measurement: "°C" }
-                      } }
-                  - store_var: degday_6m_daily_avg
+                      ({vars}) => {return vars.get_daily_diff(vars.temp_sum, 182.5*24);}
+                  - store_var: temp_6m_daily_avg
                 x: $ex xs
                 "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
               - entity: null
-                name: 1year-daily average degreedays
+                name: 1year-average outside temperature
                 yaxis: y2
                 filters:
                   - fn: >-
-                      ({vars}) => { return vars.get_daily_diff(vars.degday_sum,
-                      365*24) }
-                  - fn: >-
-                      ({vars}) => { return { meta: { unit_of_measurement: "°C" }
-                      } }
-                  - store_var: degday_1y_daily_avg
+                      ({vars}) => {return vars.get_daily_diff(vars.temp_sum, 365*24);}
+                  - store_var: temp_1y_daily_avg
                 x: $ex xs
                 "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-              - entity: null
-                name: 1day-daily average base temperature
-                yaxis: y2
-                filters:
-                  - load_var: base_temp_1d
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-              - entity: null
-                name: 1week-daily average base temperature
-                yaxis: y2
-                filters:
-                  - load_var: base_temp_1d
-                  - sliding_window_moving_average:
-                      window_size: $ex 7 * 24
-                      centered: false
-                  - store_var: base_temp_1w
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-              - entity: null
-                name: 1month-daily average base temperature
-                yaxis: y2
-                filters:
-                  - load_var: base_temp_1d
-                  - sliding_window_moving_average:
-                      window_size: $ex 31 * 24
-                      centered: false
-                  - store_var: base_temp_1m
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-              - entity: null
-                name: 6month-daily average base temperature
-                yaxis: y2
-                filters:
-                  - load_var: base_temp_1d
-                  - sliding_window_moving_average:
-                      window_size: $ex 182.5 * 24
-                      centered: false
-                  - store_var: base_temp_6m
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
-              - entity: null
-                name: 1year-daily average base temperature
-                yaxis: y2
-                filters:
-                  - load_var: base_temp_1d
-                  - sliding_window_moving_average:
-                      window_size: $ex 365 * 24
-                      centered: false
-                  - store_var: base_temp_1y
-                x: $ex xs
-                "y": $ex ys
-                unit_of_measurement: $ex meta.unit_of_measurement
               - entity: null
                 internal: true
                 yaxis: y3
