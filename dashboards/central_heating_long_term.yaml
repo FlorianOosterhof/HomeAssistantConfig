@@ -43,7 +43,6 @@ views:
                   var t0a = Array()
                   var La = Array()
                   var Ma = Array()
-                  var xa = Array()
                   var ssresa = Array()
                   // Model: G(t) = M + L*max(t0 - t, 0)
                   // G(t) = modeled/expected gas usage during 24 hours where t is the average outside temperature of those 24 hours.
@@ -67,17 +66,14 @@ views:
                     data[i] = [vars[name_temp_var].ys[i], vars[name_gas_var].ys[i]]
                   }
 
-                  var T01 = Array()
-                  var T02 = Array()
-
-                  for (var i = 0; i <= N - nr_hrs; ++i)
+                  for (var i = nr_hrs; i <= N; ++i)
                   {
-                    xa[i] = vars[name_gas_var].xs[i + nr_hrs - 1]
-                    const data_sub = data.slice(i, i + nr_hrs).toSorted(
+                    const data_sub = data.slice(i - nr_hrs, i).toSorted(
                       (d0, d1) => {
                         return d0[0] - d1[0]
                       }
                     )
+
                     var t01 = 0.0
                     var t02 = 0.0
                     const t00 = nr_hrs
@@ -87,9 +83,6 @@ views:
                       t01 += y
                       t02 += y * y
                     }
-
-                    T01[i] = t01
-                    T02[i] = t02
 
                     var s10 = 0.0
                     var s20 = 0.0
@@ -146,14 +139,17 @@ views:
                       }
                     }
 
-                    t0a[i] = t0_opt
-                    La[i] = L_opt
-                    Ma[i] = M_opt
-                    ssresa[i] = min_ssres
+                    while (t0a.length < i)
+                    {
+                      t0a.push(t0_opt)
+                      La.push(L_opt)
+                      Ma.push(M_opt)
+                      ssresa.push(min_ssres)
+                    }
                   }
 
                   return {
-                    xs: xa,
+                    xs: vars[name_temp_var].xs,
                     ys: La,
                     states: Array(),
                     statistics: Array(),
@@ -161,8 +157,6 @@ views:
                       t0: t0a,
                       M: Ma,
                       ssres: ssresa,
-                      T01: T01,
-                      T02: T02,
                       unit_of_measurement: "m³/°Cd"
                     }
                   }
@@ -174,12 +168,7 @@ views:
                   // Heat loss model fit only works well with sufficient data, e.g. a full year.
                   const nr_hrs = 365*24
                   const name = "heat_loss_model_1y"
-
-                  // With N=10, nr_hrs=5 it would result in 6 windows:
-                  // [0,1,2,3,4],[1,2,3,4,5],[2,3,4,5,6],[3,4,5,6,7],[4,5,6,7,8],[5,6,7,8,9]
-                  // so expected number of windows is N - nr_hrs + 1.
-                  // Makes sense for the edge case where N = nr_hrs => 1 window.
-                  const expected_nr_windows = N - nr_hrs + 1
+                  const expected_nr_windows = N
 
                   if (name in window && window[name].ys.length == expected_nr_windows)
                   {
