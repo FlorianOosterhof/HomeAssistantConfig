@@ -254,7 +254,20 @@ views:
                 filters:
                   - resample: 1h
                   - filter: x >= vars.gas_sum.xs[0]
-                  - integrate: d
+                  - store_var: temp_raw
+                  - fn: >-
+                      ({ys}) => {
+                        var ys_new = Array()
+                        var ys_acc = 0.0
+                        for (var i = 0; i < ys.length; ++i)
+                        {
+                          ys_acc += ys[i];
+                          ys_new[i] = ys_acc / 24
+                        }
+                        return {
+                          ys: ys_new
+                        }
+                      }
                   - store_var: temp_sum
                   - fn: >-
                       ({vars}) => {return vars.get_daily_diff(vars.temp_sum, 24);}
