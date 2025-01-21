@@ -67,9 +67,9 @@ views:
                   var T01 = Array()
                   var T02 = Array()
 
-                  for (var i = 0; i < N - nr_hrs; ++i)
+                  for (var i = 0; i <= N - nr_hrs; ++i)
                   {
-                    xa[i] = vars[name_gas_var].xs[n0 - N + i + nr_hrs]
+                    xa[i] = vars[name_gas_var].xs[n0 - N + i + nr_hrs - 1]
                     const data_sub = data.slice(i, i + nr_hrs).toSorted(
                       (d0, d1) => {
                         return d0[0] - d1[0]
@@ -170,7 +170,7 @@ views:
                   const n1 = vars.gas_1d_daily_avg.ys.length
                   const N = Math.min(n0, n1)
 
-                  const e = N - nr_hrs
+                  const e = N - nr_hrs + 1
 
                   const name = "heat_loss_model_" + name_suffix
 
