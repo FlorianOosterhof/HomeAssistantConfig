@@ -54,14 +54,17 @@ views:
                   const name_gas_var = "gas_1d_daily_avg"
                   const name_temp_var = "temp_1d_daily_avg"
 
-                  const n0 = vars[name_gas_var].ys.length
+                  const N = vars[name_gas_var].ys.length
                   const n1 = vars[name_temp_var].ys.length
-                  const N = Math.min(n0, n1)
+                  if (N != n1)
+                  {
+                    throw new Error(name_gas_var + " and " + name_temp_var + " have unequal lengths: " + N + " & " + n1 + " resp.")
+                  }
 
                   var data = Array()
                   for (var i = 0; i < N; ++i)
                   {
-                    data[i] = [vars[name_temp_var].ys[n1 - N + i], vars[name_gas_var].ys[n0 - N + i]]
+                    data[i] = [vars[name_temp_var].ys[i], vars[name_gas_var].ys[i]]
                   }
 
                   var T01 = Array()
@@ -69,7 +72,7 @@ views:
 
                   for (var i = 0; i <= N - nr_hrs; ++i)
                   {
-                    xa[i] = vars[name_gas_var].xs[n0 - N + i + nr_hrs - 1]
+                    xa[i] = vars[name_gas_var].xs[i + nr_hrs - 1]
                     const data_sub = data.slice(i, i + nr_hrs).toSorted(
                       (d0, d1) => {
                         return d0[0] - d1[0]
@@ -164,24 +167,28 @@ views:
                     }
                   }
                 }
-                vars.restore_heat_loss_model_fit = (vars, name_suffix, nr_hrs) =>
+                vars.restore_heat_loss_model_fit = (vars) =>
                 {
-                  const n0 = vars.temp_1d_daily_avg.ys.length
-                  const n1 = vars.gas_1d_daily_avg.ys.length
-                  const N = Math.min(n0, n1)
+                  const N = vars.temp_1d_daily_avg.ys.length
 
-                  const e = N - nr_hrs + 1
+                  // Heat loss model fit only works well with sufficient data, e.g. a full year.
+                  const nr_hrs = 365*24
+                  const name = "heat_loss_model_1y"
 
-                  const name = "heat_loss_model_" + name_suffix
+                  // With N=10, nr_hrs=5 it would result in 6 windows:
+                  // [0,1,2,3,4],[1,2,3,4,5],[2,3,4,5,6],[3,4,5,6,7],[4,5,6,7,8],[5,6,7,8,9]
+                  // so expected number of windows is N - nr_hrs + 1.
+                  // Makes sense for the edge case where N = nr_hrs => 1 window.
+                  const expected_nr_windows = N - nr_hrs + 1
 
-                  if (name in window && window[name].ys.length == e)
+                  if (name in window && window[name].ys.length == expected_nr_windows)
                   {
                     console.log("Do not recalculate heat loss '" + name + "'")
                     return window[name]
                   }
                   else
                   {
-                    console.log("Recalculate heat loss '" + name + "': " + (name in window) + " : " + (name in window ? window[name].ys.length : -1) + " : " + (e))
+                    console.log("Recalculate heat loss '" + name + "': " + (name in window) + " : " + (name in window ? window[name].ys.length : -1) + " : " + (expected_nr_windows))
                     const data = vars.get_heat_loss_model_fit(vars, nr_hrs)
                     console.log(data)
                     window[name] = data
@@ -246,6 +253,7 @@ views:
                 yaxis: y2
                 filters:
                   - resample: 1h
+                  - filter: x >= vars.gas_sum.xs[0]
                   - integrate: d
                   - store_var: temp_sum
                   - fn: >-
