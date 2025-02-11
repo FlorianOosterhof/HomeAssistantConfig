@@ -39,125 +39,159 @@ views:
                 {
                   return Math.min(max, Math.max(min, val));
                 }
-                vars.get_heat_loss_model_fit = (vars, nr_hrs) => {
-                  var t0a = Array()
-                  var La = Array()
-                  var Ma = Array()
-                  var ssresa = Array()
-                  // Model: G(t) = M + L*max(t0 - t, 0)
-                  // G(t) = modeled/expected gas usage during 24 hours where t is the average outside temperature of those 24 hours.
+                vars.calculate_heat_loss_model_fit = (vars, nr_hrs) => {
+                  // Model: G(x) = M + L*max(t - x, 0)
+                  // G(x) = modeled/expected gas usage during 24 hours where x is the average of some measure of outside weather conditions during those 24 hours.
                   // M  = "miscellaneous" gas usage, e.g. for domestic hot water, cooking, etc.
-                  // t0 = "cut-off" temperature. Temperature above which no heating should be necessary anymore.
+                  // t = "cut-off" temperature. Temperature above which no heating should be necessary anymore.
                   // L  = "heat loss", the amount of gas usage per degree day.
+                  // Note: The input t to G(t) can be simply outside temperature (average over 24h), or for instance KNMI "effective temperature" = T_outside - 3/2*wind_speed
 
                   const name_gas_var = "gas_1d_daily_avg"
                   const name_temp_var = "temp_1d_daily_avg"
 
-                  const N = vars[name_gas_var].ys.length
-                  const n1 = vars[name_temp_var].ys.length
-                  if (N != n1)
+                  console.log("Calculate heat loss for window size " + nr_hrs + " based on variables '" + name_gas_var + "' vs '" + name_temp_var + "'")
+
+                  const N = vars[name_gas_var].ys.length;
                   {
-                    throw new Error(name_gas_var + " and " + name_temp_var + " have unequal lengths: " + N + " & " + n1 + " resp.")
+                    const N_other = vars[name_temp_var].ys.length
+                    if (N != N_other)
+                    {
+                      throw new Error(name_gas_var + " and " + name_temp_var + " have unequal lengths: " + N + " & " + N_other + " resp.")
+                    }
                   }
+
+                  console.log("Combine data & calculate cumulative data")
+
+                  const inf = 1.0 / 0.0;
+                  const nan = 0.0 / 0.0;
 
                   var data = Array()
+                  var cumulative_data = Array()
+                  var t00 = 0.0;
+                  var t01 = 0.0;
+                  var t02 = 0.0;
                   for (var i = 0; i < N; ++i)
                   {
-                    data[i] = [vars[name_temp_var].ys[i], vars[name_gas_var].ys[i]]
+                    const x = vars[name_temp_var].ys[i];
+                    const y = vars[name_gas_var].ys[i];
+                    t00 += 1;
+                    t01 += y;
+                    t02 += y * y;
+                    data[i] = [x, y, i]
+
+                    const j = i - (nr_hrs - 1);
+
+                    // cumulative_data[i] = [t00, t01, t02, s00, s10, s20, s11, s01, ssres_opt, M_opt, t_opt, L_opt, x_prev]
+                    cumulative_data[i] =    [t00, t01, t02, 0.0, 0.0, 0.0, 0.0, 0.0, inf,       nan,   nan,   nan,   -inf]
+
+                    if (j >= 0)
+                    {
+                      y_prev = vars[name_gas_var].ys[j];
+                      t00 -= 1;
+                      t01 -= y_prev;
+                      t02 -= y_prev * y_prev;
+                    }
                   }
 
-                  for (var i = nr_hrs; i <= N; ++i)
-                  {
-                    const data_sub = data.slice(i - nr_hrs, i).toSorted(
-                      (d0, d1) => {
-                        return d0[0] - d1[0]
-                      }
-                    )
+                  console.log("Sort combined data")
 
-                    var t01 = 0.0
-                    var t02 = 0.0
-                    const t00 = nr_hrs
-                    for (var j = 0; j < nr_hrs; ++j)
-                    {
-                      const y = data_sub[j][1]
-                      t01 += y
-                      t02 += y * y
+                  const data_sorted = data.toSorted(
+                    (d0, d1) => {
+                      return d0[0] - d1[0];
                     }
+                  );
 
-                    var s10 = 0.0
-                    var s20 = 0.0
-                    var s01 = 0.0
-                    var s11 = 0.0
-                    var x_next = data_sub[0][0]
+                  console.log("Iterate over sorted combined data.")
 
-                    var min_ssres = 1.0 / 0.0 // inf
-                    var t0_opt = 0.0 / 0.0 // nan
-                    var L_opt = t0_opt
-                    var M_opt = t0_opt
+                  for (var i = 0; i < N; ++i)
+                  {
+                    const data_elt = data_sorted[i];
+                    const x = data_elt[0]
+                    const y = data_elt[1]
+                    const j = data_elt[2]
 
-                    for (var j = 0; j < nr_hrs; ++j)
+                    for (var k = 0; k < nr_hrs && j+k < N; ++k)
                     {
-                      const s00 = j + 1
-                      const x = x_next
-                      x_next = (j + 1 < nr_hrs) ? data_sub[j+1][0] : 0.0 / 0.0
-                      const y = data_sub[j][1]
-                      s10 += x
-                      s20 += x * x
-                      s01 += y
-                      s11 += x * y
-
-                      const c = t01 - s01
+                      const t00 = cumulative_data[j+k][0]
+                      const t01 = cumulative_data[j+k][1]
+                      const t02 = cumulative_data[j+k][2]
+                      const s00 = cumulative_data[j+k][3]
+                      const s10 = cumulative_data[j+k][4]
+                      const s20 = cumulative_data[j+k][5]
+                      const s11 = cumulative_data[j+k][6]
+                      const s01 = cumulative_data[j+k][7]
+                      var ssres_opt = cumulative_data[j+k][8]
+                      var M_opt = cumulative_data[j+k][9]
+                      var t_opt = cumulative_data[j+k][10]
+                      var L_opt = cumulative_data[j+k][11]
+                      const x_prev = cumulative_data[j+k][12]
 
                       const det = s10*s10 - s00*s20
                       // By Sedrakyan's lemma det <= 0 and == 0 if and only if all xi are equal.
-                      // If det >= 0.0 the det == 0.0
-                      if (det >= 0.0)
+                      // Therefore, if det >= 0.0 the det == 0.0
+                      if (det < 0.0)
                       {
-                        continue
+                        const M = s00 < t00 ? (t01 - s01) / (t00 - s00) : 0.0
+                        const L_num = s00 * s11 - s01 * s10
+                        const L =  L_num / det
+
+                        // t0 = (...) / det / L
+                        //    = (...) / (L * det)
+                        //    = (...) / L_num
+                        // Since we look at the interval [x_prev, x] for t0, the minimum is attained either where
+                        // derivative = 0 or at the boundary closest to that point. So clamp between [x_prev, x]
+                        const t0_orig = (M * s00 * s20 - M * s10 * s10 - s01 * s20 + s10 * s11) / L_num
+                        const t0 = vars.clamp(t0_orig, x_prev, x)
+
+                        const ssres = t02 - 2*M*t01 + t00*M*M - 2*L*t0*s01 + 2*L*s11 + 2*M*L*t0*s00 - 2*M*L*s10 + L*L*t0*t0*s00 - 2*L*L*t0*s10 + L*L*s20
+
+                        if (ssres < ssres_opt)
+                        {
+                          ssres_opt = ssres
+                          t_opt = t0
+                          L_opt = L
+                          M_opt = M
+                        }
                       }
 
-                      const M = j < t00 ? c / (t00 - j) : 0.0
-                      const L_num = s00 * s11 - s01 * s10
-                      const L =  L_num / det
-
-                      // t0 = (...) / det / L
-                      //    = (...) / (L * det)
-                      //    = (...) / L_num
-                      // Since we look at the interval [x, x_next] for t0, the minimum is attained either where
-                      // derivative = 0 or at the boundary closest to that point. So clamp between [x, x_next]
-                      const t0_orig = (M * s00 * s20 - M * s10 * s10 - s01 * s20 + s10 * s11) / L_num
-                      const t0 = vars.clamp(t0_orig, x, x_next)
-
-                      const ssres = t02 - 2*M*t01 + t00*M*M - 2*L*t0*s01 + 2*L*s11 + 2*M*L*t0*s00 - 2*M*L*s10 + L*L*t0*t0*s00 - 2*L*L*t0*s10 + L*L*s20
-
-                      if (ssres < min_ssres)
-                      {
-                        min_ssres = ssres
-                        t0_opt = t0
-                        L_opt = L
-                        M_opt = M
-                      }
+                      cumulative_data[j+k][3] = s00 + 1
+                      cumulative_data[j+k][4] = s10 + x
+                      cumulative_data[j+k][5] = s20 + x * x
+                      cumulative_data[j+k][6] = s11 + x * y
+                      cumulative_data[j+k][7] = s01 + y
+                      cumulative_data[j+k][8] = ssres_opt
+                      cumulative_data[j+k][9] = M_opt
+                      cumulative_data[j+k][10] = t_opt
+                      cumulative_data[j+k][11] = L_opt
+                      cumulative_data[j+k][12] = x
                     }
+                  }
 
-                    while (t0a.length < i)
-                    {
-                      t0a.push(t0_opt)
-                      La.push(L_opt)
-                      Ma.push(M_opt)
-                      ssresa.push(min_ssres)
-                    }
+                  console.log("Extract fit parameters from algorithm data")
+
+                  var M_opt_a = Array()
+                  var L_opt_a = Array()
+                  var t_opt_a = Array()
+
+                  for (var i = 0; i < N; ++i)
+                  {
+                    const j = Math.max(nr_hrs - 1, i);
+                    M_opt_a[i] = cumulative_data[j][9]
+                    t_opt_a[i] = cumulative_data[j][10]
+                    L_opt_a[i] = cumulative_data[j][11]
                   }
 
                   return {
                     xs: vars[name_temp_var].xs,
-                    ys: La,
+                    ys: L_opt_a,
                     states: Array(),
                     statistics: Array(),
                     meta: {
-                      t0: t0a,
-                      M: Ma,
-                      ssres: ssresa,
-                      unit_of_measurement: "m³/°Cd"
+                      unit_of_measurement: "m³/°Cd",
+                      t_opt: t_opt_a,
+                      M_opt: M_opt_a,
+                      L_opt: L_opt_a
                     }
                   }
                 }
@@ -177,8 +211,7 @@ views:
                   }
                   else
                   {
-                    console.log("Recalculate heat loss '" + name + "': " + (name in window) + " : " + (name in window ? window[name].ys.length : -1) + " : " + (expected_nr_windows))
-                    const data = vars.get_heat_loss_model_fit(vars, nr_hrs)
+                    const data = vars.calculate_heat_loss_model_fit(vars, nr_hrs)
                     console.log(data)
                     window[name] = data
                     return data
@@ -303,7 +336,12 @@ views:
                 "y": $ex ys
               - entity: null
                 internal: true
-                yaxis: y3
+                filters:
+                  - fn: |-
+                      ({vars}) => {
+                        return vars.restore_heat_loss_model_fit(vars, "1y", 365*24)
+                      }
+                  - store_var: heat_loss_model_1y
               - entity: null
                 #filters:
                 #  - fn: |-
@@ -348,11 +386,7 @@ views:
                 internal: true
               - entity: null
                 filters:
-                  - fn: |-
-                      ({vars}) => {
-                        return vars.restore_heat_loss_model_fit(vars, "1y", 365*24)
-                      }
-                  - store_var: heat_loss_model_1y
+                  - load_var: heat_loss_model_1y
                 yaxis: y3
                 x: $ex xs
                 "y": $ex ys
@@ -395,9 +429,10 @@ views:
               - entity: null
                 filters:
                   - load_var: heat_loss_model_1y
+                  - map_y_numbers: meta.t_opt[i]
                 yaxis: y4
                 x: $ex xs
-                "y": $ex meta.t0
+                "y": $ex ys
                 unit_of_measurement: "°C"
                 name: 1year modeled base temp
                 show_value: true
@@ -437,9 +472,10 @@ views:
               - entity: null
                 filters:
                   - load_var: heat_loss_model_1y
+                  - map_y_numbers: meta.M_opt[i]
                 yaxis: y5
                 x: $ex xs
-                "y": $ex meta.M
+                "y": $ex ys
                 unit_of_measurement: "m³"
                 name: 1year modeled miscellaneous gas use
                 show_value: true
@@ -482,7 +518,7 @@ views:
               - entity: null
                 filters:
                   - load_var: heat_loss_model_1y
-                  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
+                  - map_y_numbers: (meta.L_opt[i] * (meta.t_opt[i]+10)) * 8.8 / 20
                 yaxis: y6
                 x: $ex xs
                 "y": $ex ys
