@@ -393,6 +393,7 @@ views:
                 unit_of_measurement: "m³/°Cd"
                 name: 1year modelled heat loss
                 show_value: true
+                texttemplate: $fn ({getFromConfig}) => '%{y:.4f} ' + getFromConfig(".unit_of_measurement")
               - entity: null
                 internal: true
                 yaxis: y4
@@ -436,6 +437,7 @@ views:
                 unit_of_measurement: "°C"
                 name: 1year modeled base temp
                 show_value: true
+                texttemplate: $fn ({getFromConfig}) => '%{y:.2f} ' + getFromConfig(".unit_of_measurement")
               - entity: null
                 internal: true
                 yaxis: y5
@@ -479,6 +481,7 @@ views:
                 unit_of_measurement: "m³"
                 name: 1year modeled miscellaneous gas use
                 show_value: true
+                texttemplate: $fn ({getFromConfig}) => '%{y:.4f} ' + getFromConfig(".unit_of_measurement")
               - entity: null
                 internal: true
                 yaxis: y6
@@ -525,6 +528,7 @@ views:
                 unit_of_measurement: "kW"
                 name: 1year modelled capacity
                 show_value: true
+                texttemplate: $fn ({getFromConfig}) => '%{y:.3f} ' + getFromConfig(".unit_of_measurement")
             grid_options:
               columns: full
             refresh_interval: 1h
