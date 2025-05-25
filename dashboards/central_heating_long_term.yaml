@@ -6,6 +6,7 @@ views:
     dense_section_placement: true
     sections:
       - type: grid
+        column_span: 2
         cards:
           - type: custom:plotly-graph
             hours_to_show: |-
@@ -224,55 +225,16 @@ views:
               - entity: sensor.gas_consumed_for_ch
                 statistic: sum
                 name: 1day-average gas usage
-                yaxis: y1
                 filters:
                   - resample: 1h
                   - store_var: gas_sum
                   - fn: >-
                       ({vars}) => {return vars.get_daily_diff(vars.gas_sum, 24);}
                   - store_var: gas_1d_daily_avg
-                x: $ex xs
-                "y": $ex ys
-              - entity: null
-                name: 1week-average gas usage
-                yaxis: y1
-                filters:
-                  - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum, 7*24);}
-                  - store_var: gas_1w_daily_avg
-                x: $ex xs
-                "y": $ex ys
-              - entity: null
-                name: 1month-average gas usage
-                yaxis: y1
-                filters:
-                  - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum, 31*24);}
-                  - store_var: gas_1m_daily_avg
-                x: $ex xs
-                "y": $ex ys
-              - entity: null
-                name: 6month-average gas usage
-                yaxis: y1
-                filters:
-                  - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum, 182.5*24);}
-                  - store_var: gas_6m_daily_avg
-                x: $ex xs
-                "y": $ex ys
-              - entity: null
-                name: 1year-average gas usage
-                yaxis: y1
-                filters:
-                  - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.gas_sum, 365*24);}
-                  - store_var: gas_1y_daily_avg
-                x: $ex xs
-                "y": $ex ys
+                internal: true
               - entity: sensor.template_location_1_knmi_temperature
                 statistic: mean
                 name: 1day-average outside temperature
-                yaxis: y2
                 filters:
                   - resample: 1h
                   - filter: x >= vars.gas_sum.xs[0]
@@ -296,233 +258,59 @@ views:
                   - fn: >-
                       ({vars}) => { return { meta: {unit_of_measurement: "°C" } } }
                   - store_var: temp_1d_daily_avg
-                x: $ex xs
-                "y": $ex ys
-              - entity: null
-                name: 1week-average outside temperature
-                yaxis: y2
-                filters:
-                  - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.temp_sum, 7*24);}
-                  - store_var: temp_1w_daily_avg
-                x: $ex xs
-                "y": $ex ys
-              - entity: null
-                name: 1month-average outside temperature
-                yaxis: y2
-                filters:
-                  - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.temp_sum, 31*24);}
-                  - store_var: temp_1m_daily_avg
-                x: $ex xs
-                "y": $ex ys
-              - entity: null
-                name: 6month-average outside temperature
-                yaxis: y2
-                filters:
-                  - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.temp_sum, 182.5*24);}
-                  - store_var: temp_6m_daily_avg
-                x: $ex xs
-                "y": $ex ys
-              - entity: null
-                name: 1year-average outside temperature
-                yaxis: y2
-                filters:
-                  - fn: >-
-                      ({vars}) => {return vars.get_daily_diff(vars.temp_sum, 365*24);}
-                  - store_var: temp_1y_daily_avg
-                x: $ex xs
-                "y": $ex ys
-              - entity: null
+                  - fn: |-
+                      ({vars}) =>
+                      {
+                        window.temp_1d_daily_avg = vars.temp_1d_daily_avg
+                        window.gas_1d_daily_avg = vars.gas_1d_daily_avg
+                      }
                 internal: true
+              - entity: null # calculate & show heat loss
                 filters:
                   - fn: |-
                       ({vars}) => {
                         return vars.restore_heat_loss_model_fit(vars, "1y", 365*24)
                       }
                   - store_var: heat_loss_model_1y
-              - entity: null
-                #filters:
-                #  - fn: |-
-                #      ({vars}) => {
-                #        return vars.restore_heat_loss_model_fit(vars, "1w", 7*24)
-                #      }
-                #  - store_var: heat_loss_model_1w
-                #yaxis: y3
-                #x: $ex xs
-                #"y": $ex ys
-                #unit_of_measurement: $ex meta.unit_of_measurement
-                #name: 1week modelled heat loss
-                #show_value: true
-                internal: true
-              - entity: null
-                #filters:
-                #  - fn: |-
-                #      ({vars}) => {
-                #        return vars.restore_heat_loss_model_fit(vars, "1m", 30*24)
-                #      }
-                #  - store_var: heat_loss_model_1m
-                #yaxis: y3
-                #x: $ex xs
-                #"y": $ex ys
-                #unit_of_measurement: $ex meta.unit_of_measurement
-                #name: 1month modelled heat loss
-                #show_value: true
-                internal: true
-              - entity: null
-                #filters:
-                #  - fn: |-
-                #      ({vars}) => {
-                #        return vars.restore_heat_loss_model_fit(vars, "6m", 365/2*24)
-                #      }
-                #  - store_var: heat_loss_model_6m
-                #yaxis: y3
-                #x: $ex xs
-                #"y": $ex ys
-                #unit_of_measurement: $ex meta.unit_of_measurement
-                #name: 6month modelled heat loss
-                #show_value: true
-                internal: true
-              - entity: null
-                filters:
-                  - load_var: heat_loss_model_1y
-                yaxis: y3
+                  - fn: |-
+                      ({vars}) =>
+                      {
+                        window.heat_loss_model_1y = vars.heat_loss_model_1y
+                      }
+                yaxis: y1
                 x: $ex xs
                 "y": $ex ys
                 unit_of_measurement: "m³/°Cd"
                 name: 1year modelled heat loss
                 show_value: true
                 texttemplate: $fn ({getFromConfig}) => '%{y:.4f} ' + getFromConfig(".unit_of_measurement")
-              - entity: null
-                internal: true
-                yaxis: y4
-              - entity: null
-                #filters:
-                #  - load_var: heat_loss_model_1w
-                #yaxis: y4
-                #x: $ex xs
-                #"y": $ex meta.t0
-                #unit_of_measurement: "°C"
-                #name: 1week modeled base temp
-                #show_value: true
-                internal: true
-              - entity: null
-                #filters:
-                #  - load_var: heat_loss_model_1m
-                #yaxis: y4
-                #x: $ex xs
-                #"y": $ex meta.t0
-                #unit_of_measurement: "°C"
-                #name: 1month modeled base temp
-                #show_value: true
-                internal: true
-              - entity: null
-                #filters:
-                #  - load_var: heat_loss_model_6m
-                #yaxis: y4
-                #x: $ex xs
-                #"y": $ex meta.t0
-                #unit_of_measurement: "°C"
-                #name: 6month modeled base temp
-                #show_value: true
-                internal: true
-              - entity: null
+              - entity: null # t_opt of heat loss
                 filters:
                   - load_var: heat_loss_model_1y
                   - map_y_numbers: meta.t_opt[i]
-                yaxis: y4
+                yaxis: y2
                 x: $ex xs
                 "y": $ex ys
                 unit_of_measurement: "°C"
                 name: 1year modeled base temp
                 show_value: true
                 texttemplate: $fn ({getFromConfig}) => '%{y:.2f} ' + getFromConfig(".unit_of_measurement")
-              - entity: null
-                internal: true
-                yaxis: y5
-              - entity: null
-                #filters:
-                #  - load_var: heat_loss_model_1w
-                #yaxis: y5
-                #x: $ex xs
-                #"y": $ex meta.M
-                #unit_of_measurement: "m³"
-                #name: 1week modeled miscellaneous gas use
-                #show_value: true
-                internal: true
-              - entity: null
-                #filters:
-                #  - load_var: heat_loss_model_1m
-                #yaxis: y5
-                #x: $ex xs
-                #"y": $ex meta.M
-                #unit_of_measurement: "m³"
-                #name: 1month modeled miscellaneous gas use
-                #show_value: true
-                internal: true
-              - entity: null
-                #filters:
-                #  - load_var: heat_loss_model_6m
-                #yaxis: y5
-                #x: $ex xs
-                #"y": $ex meta.M
-                #unit_of_measurement: "m³"
-                #name: 6month modeled miscellaneous gas use
-                #show_value: true
-                internal: true
-              - entity: null
+              - entity: null # misc. energy usage of heat loss
                 filters:
                   - load_var: heat_loss_model_1y
                   - map_y_numbers: meta.M_opt[i]
-                yaxis: y5
+                yaxis: y3
                 x: $ex xs
                 "y": $ex ys
                 unit_of_measurement: "m³"
                 name: 1year modeled miscellaneous gas use
                 show_value: true
                 texttemplate: $fn ({getFromConfig}) => '%{y:.4f} ' + getFromConfig(".unit_of_measurement")
-              - entity: null
-                internal: true
-                yaxis: y6
-              - entity: null
-                #filters:
-                #  - load_var: heat_loss_model_1w
-                #  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
-                #yaxis: y6
-                #x: $ex xs
-                #"y": $ex ys
-                #unit_of_measurement: "kW"
-                #name: 1week modelled capacity
-                #show_value: true
-                internal: true
-              - entity: null
-                #filters:
-                #  - load_var: heat_loss_model_1m
-                #  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
-                #yaxis: y6
-                #x: $ex xs
-                #"y": $ex ys
-                #unit_of_measurement: "kW"
-                #name: 1month modelled capacity
-                #show_value: true
-                internal: true
-              - entity: null
-                #filters:
-                #  - load_var: heat_loss_model_6m
-                #  - map_y_numbers: y * (meta.t0[i] + 10) * 8.8 / 20
-                #yaxis: y6
-                #x: $ex xs
-                #"y": $ex ys
-                #unit_of_measurement: "kW"
-                #name: 6month modelled capacity
-                #show_value: true
-                internal: true
-              - entity: null
+              - entity: null # power at -10 of heat loss
                 filters:
                   - load_var: heat_loss_model_1y
                   - map_y_numbers: (meta.L_opt[i] * (meta.t_opt[i]+10)) * 8.8 / 20
-                yaxis: y6
+                yaxis: y4
                 x: $ex xs
                 "y": $ex ys
                 unit_of_measurement: "kW"
@@ -531,8 +319,41 @@ views:
                 texttemplate: $fn ({getFromConfig}) => '%{y:.3f} ' + getFromConfig(".unit_of_measurement")
             grid_options:
               columns: full
-            refresh_interval: 1h
+            refresh_interval: 8670h
+            color_scheme:
+              - "#9467bd"
+            defaults:
+              yaxes:
+                side: left
+                overlaying: "y"
+                visible: true
+                showgrid: true
+                nticks: 6
+            layout:
+              dragmode: false
+              margin:
+                t: 30
+                l: 45
+                r: 100
+                b: 50
+              height: 900
+              grid:
+                rows: 4
+                columns: 1
+                pattern: coupled
+                roworder: top to bottom
+              legend:
+                orientation: h
+            config:
+              scrollZoom: false
+              displayModeBar: true
+      - type: grid
+        column_span: 2
+        cards:
+          - type: custom:plotly-graph
+            hours_to_show: 8760
             raw_plotly_config: true
+            autorange_after_scroll: true
             color_scheme:
               - "#1f77b4"
               - "#ff7f0e"
@@ -553,24 +374,133 @@ views:
               yaxes:
                 side: left
                 overlaying: "y"
-                visible: true
                 showgrid: true
                 nticks: 6
+            refresh_interval: |-
+              $ex
+              {
+                const now = new Date();
+                const x = [new Date(now - 365*24*60*60*1000), now];
+                vars.temp_1d_daily_avg = {ys: [0, 0], xs: x}
+                vars.gas_1d_daily_avg = {ys: [0, 0], xs: x}
+                vars.heat_loss_model_1y = {ys: [0, 0], xs: x, meta: {L_opt: [0], t_opt: [20], M_opt: [0]}}
+                if ("temp_1d_daily_avg" in window && "gas_1d_daily_avg" in window)
+                {
+                  vars.temp_1d_daily_avg = window.temp_1d_daily_avg
+                  vars.gas_1d_daily_avg = window.gas_1d_daily_avg
+                  if ("heat_loss_model_1y" in window)
+                  {
+                    vars.heat_loss_model_1y = window.heat_loss_model_1y
+                    return "8760h"
+                  }
+                  else
+                  {
+                    return "1s"
+                  }
+                }
+                else
+                {
+                  return "1s"
+                }
+              }
+            entities:
+              - entity: null
+                yaxis: y1
+                filters:
+                  - load_var: temp_1d_daily_avg
+                  - fn: |-
+                      ({vars, getFromConfig, xs}) => 
+                      {
+                        const start = new Date(getFromConfig("visible_range")[0])
+                        const end = new Date(getFromConfig("visible_range")[1])
+                        const hi_start = xs.length
+                        const lo_start = 0
+                        var hi = hi_start
+                        var lo = lo_start
+                        var mid = Math.round((hi + lo) / 2)
+                        while (hi - lo > 1)
+                        {
+                          if (xs[mid] < start)
+                          {
+                            lo = mid
+                          }
+                          else
+                          {
+                            hi = mid
+                          }
+                          mid = Math.floor((lo + hi) / 2)
+                        }
+                        vars.window_start = lo
+                        vars.window_end = Math.min(vars.window_start + 365*24, hi_start)
+                        return null
+                      }
+                  - filter: i >= vars.window_start && i < vars.window_end
+                  - store_var: scatter_x
+                x: $ex xs
+                "y": $ex ys
+              - entity: null
+                yaxis: y2
+                filters:
+                  - load_var: gas_1d_daily_avg
+                  - filter: i >= vars.window_start && i < vars.window_end
+                  - store_var: scatter_y
+                x: $ex xs
+                "y": $ex ys
+              - entity: null
+                "y": $ex vars.scatter_y.ys
+                x: $ex vars.scatter_x.ys
+                yaxis: y3
+                xaxis: x2
+                mode: markers
+                name: points
+                marker:
+                  size: 2
+                  type: scatter
+              - entity: null
+                yaxis: y3
+                xaxis: x2
+                fn: |-
+                  $ex
+                  {
+                    const L = vars.heat_loss_model_1y.meta.L_opt.at(vars.window_end-1);
+                    const M = vars.heat_loss_model_1y.meta.M_opt.at(vars.window_end-1);
+                    const t = vars.heat_loss_model_1y.meta.t_opt.at(vars.window_end-1);
+
+                    var func = (x) => Math.max(t-x,0)*L + M
+
+                    vars.fit_x = [-5, t, 25]
+                    vars.fit_y = vars.fit_x.map(func)
+                    return null
+                  }
+                x: $ex vars.fit_x
+                "y": $ex vars.fit_y
+            grid_options:
+              columns: full
             layout:
+              xaxis2:
+                range: |-
+                  $ex
+                  {
+                    return [
+                      Math.min(vars.fit_x.at( 0), vars.temp_1d_daily_avg.ys.reduce((a,b) => Math.min(a, b),  Infinity)) - 1,
+                      Math.max(vars.fit_x.at(-1), vars.temp_1d_daily_avg.ys.reduce((a,b) => Math.max(a, b), -Infinity)) + 1
+                    ]
+                  }
+              yaxis3:
+                range: |-
+                  $ex
+                  {
+                    return [
+                      0,
+                      Math.max(vars.fit_y.at(0), vars.gas_1d_daily_avg.ys.reduce((a,b) => Math.max(a, b), -Infinity)) + 0.5
+                    ]
+                  }
               dragmode: pan
-              margin:
-                t: 30
-                l: 45
-                r: 30
-                b: 50
-              height: 1800
+              height: 900
               grid:
-                rows: 6
+                rows: 3
                 columns: 1
                 pattern: coupled
-                roworder: top to bottom
               legend:
                 orientation: h
-        column_span: 4
-    cards: []
-title: Central heating Long-Term
+title: "Central Heating Long-Term"
