@@ -226,6 +226,7 @@ views:
                 statistic: sum
                 name: 1day-average gas usage
                 filters:
+                  - map_x: +x + 1
                   - resample: 1h
                   - store_var: gas_sum
                   - fn: >-
@@ -236,6 +237,7 @@ views:
                 statistic: mean
                 name: 1day-average outside temperature
                 filters:
+                  - map_x: +x + 1
                   - resample: 1h
                   - filter: x >= vars.gas_sum.xs[0]
                   - store_var: temp_raw
