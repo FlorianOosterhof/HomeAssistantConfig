@@ -218,6 +218,40 @@ views:
                     return data
                   }
                 }
+                vars.resample = (vars, name, intervalMs) =>
+                {
+                  const orig_data = vars[name];
+                  const xs = orig_data.xs;
+                  const ys = orig_data.ys;
+                  const states = orig_data.states;
+                  const statistics = orig_data.statistics;
+                  var data = {
+                    xs: [],
+                    ys: [],
+                    states: [],
+                    statistics: [],
+                    meta: orig_data.meta
+                  };
+                  const interval = intervalMs
+
+                  const x0 = Math.floor(+xs[0] / interval) * interval;
+                  const x1 = +xs[xs.length - 1];
+                  let i = 0;
+                  for (let x = x0; x <= x1; x += interval) {
+                    while (+xs[i + 1] < x && i < xs.length - 1) {
+                      i++;
+                    }
+                    const y_curr = ys[i];
+                    const y_next = i < xs.length ? ys[i+1] : y_curr;
+                    const x_curr = +xs[i];
+                    const x_next = i < xs.length ? +xs[i+1] : x;
+                    data.xs.push(new Date(x));
+                    data.ys.push(y_curr + (y_next - y_curr)/(x_next - x_curr)*(x - x_curr));
+                    if (states[i]) data.states.push(states[i]);
+                    if (statistics[i]) data.statistics.push(statistics[i]);
+                  }
+                  return data;
+                }
               }
             hours_to_show: $ex vars.hours_to_show + "h"
             title: Daily average gas usage for Central Heating
@@ -227,7 +261,8 @@ views:
                 name: 1day-average gas usage
                 filters:
                   - map_x: +x + 1
-                  - resample: 1h
+                  - store_var: gas_sum_orig
+                  - fn: ({vars}) => { return vars.resample(vars, "gas_sum_orig", 3600000) }
                   - store_var: gas_sum
                   - fn: >-
                       ({vars}) => {return vars.get_daily_diff(vars.gas_sum, 24);}
