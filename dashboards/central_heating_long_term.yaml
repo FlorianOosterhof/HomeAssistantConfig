@@ -9,7 +9,7 @@ views:
         column_span: 2
         cards:
           - type: custom:plotly-graph
-            hours_to_show: |-
+            fn: |-
               $ex {
                 vars.now = Date.now()
                 vars.start = vars.now - 2*365*24*3600*1000
@@ -218,8 +218,8 @@ views:
                     return data
                   }
                 }
-                return vars.hours_to_show + "h"
               }
+            hours_to_show: $ex vars.hours_to_show + "h"
             title: Daily average gas usage for Central Heating
             entities:
               - entity: sensor.gas_consumed_for_ch
