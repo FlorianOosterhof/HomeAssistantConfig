@@ -41,16 +41,13 @@ views:
                 {
                   return Math.min(max, Math.max(min, val));
                 }
-                vars.calculate_heat_loss_model_fit = (vars, nr_hrs) => {
+                vars.calculate_heat_loss_model_fit = (vars, name_gas_var, name_temp_var, nr_hrs) => {
                   // Model: G(x) = M + L*max(t - x, 0)
                   // G(x) = modeled/expected gas usage during 24 hours where x is the average of some measure of outside weather conditions during those 24 hours.
                   // M  = "miscellaneous" gas usage, e.g. for domestic hot water, cooking, etc.
                   // t = "cut-off" temperature. Temperature above which no heating should be necessary anymore.
                   // L  = "heat loss", the amount of gas usage per degree day.
                   // Note: The input t to G(t) can be simply outside temperature (average over 24h), or for instance KNMI "effective temperature" = T_outside - 3/2*wind_speed
-
-                  const name_gas_var = "gas_1d_daily_avg"
-                  const name_temp_var = "temp_1d_daily_avg"
 
                   console.log("Calculate heat loss for window size " + nr_hrs + " based on variables '" + name_gas_var + "' vs '" + name_temp_var + "'")
 
@@ -213,7 +210,9 @@ views:
                   }
                   else
                   {
-                    const data = vars.calculate_heat_loss_model_fit(vars, nr_hrs)
+                    const name_gas_var = "gas_1d_daily_avg"
+                    const name_temp_var = "temp_1d_daily_avg"
+                    const data = vars.calculate_heat_loss_model_fit(vars, name_gas_var, name_temp_var, nr_hrs)
                     console.log(data)
                     window[name] = data
                     return data
