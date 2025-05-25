@@ -11,8 +11,9 @@ views:
           - type: custom:plotly-graph
             fn: |-
               $ex {
+                console.log("Startup of heat loss graph card")
                 vars.now = Date.now()
-                vars.start = vars.now - 2*365*24*3600*1000
+                vars.start = new Date("2018-01-01 00:00:00Z")
                 
                 vars.total_time_h = Math.floor((vars.now - vars.start) / 1000 / 3600);
                 vars.hours_to_show = vars.total_time_h
