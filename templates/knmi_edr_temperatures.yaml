@@ -16,69 +16,154 @@
           {% set prev_date_val_ts = ((date_val_ts - 10*60) / (10*60)) | round(0) * 10*60 %}
           {% set prev_date_val = prev_date_val_ts | as_datetime | as_local %}
           {{ prev_date_val }}
-        parameter_var: "t_dryb_10"
+        parameter_temp_var: "ta"
+        parameter_wind_var: "ff"
+        parameter_irr_var: "qg"
         location_1_name: !secret knmi_location_1_name
         location_2_name: !secret knmi_location_2_name
         location_3_name: !secret knmi_location_3_name
         location_4_name: !secret knmi_location_4_name
+        location_1_id: !secret knmi_location_1_id
+        location_2_id: !secret knmi_location_2_id
+        location_3_id: !secret knmi_location_3_id
+        location_4_id: !secret knmi_location_4_id
     - service: rest_command.get_knmi_edr_observations_location_data
       data:
-        location_id: !secret knmi_location_1_id
+        location_id: "0-20000-0-{{ location_1_id }},0-20000-0-{{ location_2_id }},0-20000-0-{{ location_3_id }},0-20000-0-{{ location_4_id }}"
         date_interval: "{{ date_var }}"
-        parameter_name: "{{ parameter_var }}"
-      response_variable: location_1_data
-    - service: rest_command.get_knmi_edr_observations_location_data
-      data:
-        location_id: !secret knmi_location_2_id
-        date_interval: "{{ date_var }}"
-        parameter_name: "{{ parameter_var }}"
-      response_variable: location_2_data
-    - service: rest_command.get_knmi_edr_observations_location_data
-      data:
-        location_id: !secret knmi_location_3_id
-        date_interval: "{{ date_var }}"
-        parameter_name: "{{ parameter_var }}"
-      response_variable: location_3_data
-    - service: rest_command.get_knmi_edr_observations_location_data
-      data:
-        location_id: !secret knmi_location_4_id
-        date_interval: "{{ date_var }}"
-        parameter_name: "{{ parameter_var }}"
-      response_variable: location_4_data
+        parameter_name: "{{ parameter_temp_var }},{{ parameter_wind_var }},{{ parameter_irr_var }}"
+      response_variable: location_data
+    - variables:
+        valid: "{{ location_data['status'] == 200 }}"
+        data: >
+          {{ iif(
+              valid | bool, 
+              location_data['content'], 
+              '{"coverages": [
+                { "ranges": {
+                    "ff": { "values": [0] },
+                    "qg": { "values": [0] },
+                    "ta": { "values": [0] }
+                  }
+                },{ "ranges": {
+                    "ff": { "values": [0] },
+                    "qg": { "values": [0] },
+                    "ta": { "values": [0] }
+                  }
+                },{ "ranges": {
+                    "ff": { "values": [0] },
+                    "qg": { "values": [0] },
+                    "ta": { "values": [0] }
+                  }
+                },{ "ranges": {
+                    "ff": { "values": [0] },
+                    "qg": { "values": [0] },
+                    "ta": { "values": [0] }
+                  }
+                }
+              ]}' | from_json
+            )
+          }}
+        location_1_data: "{{ data['coverages'][0]['ranges'] }}"
+        location_2_data: "{{ data['coverages'][1]['ranges'] }}"
+        location_3_data: "{{ data['coverages'][2]['ranges'] }}"
+        location_4_data: "{{ data['coverages'][3]['ranges'] }}"
+        location_1_temp: "{{ location_1_data[parameter_temp_var]['values'][0] }}"
+        location_2_temp: "{{ location_2_data[parameter_temp_var]['values'][0] }}"
+        location_3_temp: "{{ location_3_data[parameter_temp_var]['values'][0] }}"
+        location_4_temp: "{{ location_4_data[parameter_temp_var]['values'][0] }}"
+        location_1_wind: "{{ location_1_data[parameter_wind_var]['values'][0] }}"
+        location_2_wind: "{{ location_2_data[parameter_wind_var]['values'][0] }}"
+        location_3_wind: "{{ location_3_data[parameter_wind_var]['values'][0] }}"
+        location_4_wind: "{{ location_4_data[parameter_wind_var]['values'][0] }}"
+        location_1_irr: "{{ location_1_data[parameter_irr_var]['values'][0] }}"
+        location_2_irr: "{{ location_2_data[parameter_irr_var]['values'][0] }}"
+        location_3_irr: "{{ location_3_data[parameter_irr_var]['values'][0] }}"
+        location_4_irr: "{{ location_4_data[parameter_irr_var]['values'][0] }}"
   sensor:
     - unique_id: location_1_knmi_temperature
       name: "{{ location_1_name }} KNMI Temperature"
-      availability: "{{ location_1_data['status'] == 200 }}"
-      state: >
-        {% set data = location_1_data['content'] | from_json %}
-        {{ data['ranges'][parameter_var]['values'][0] }}
+      availability: "{{ valid | bool }}"
+      state: "{{ location_1_temp }}"
       state_class: measurement
       device_class: temperature
       unit_of_measurement: °C
     - unique_id: location_2_knmi_temperature
       name: "{{ location_2_name }} KNMI Temperature"
-      availability: "{{ location_2_data['status'] == 200 }}"
-      state: >
-        {% set data = location_2_data['content'] | from_json %}
-        {{ data['ranges'][parameter_var]['values'][0] }}
+      availability: "{{ valid | bool }}"
+      state: "{{ location_2_temp }}"
       state_class: measurement
       device_class: temperature
       unit_of_measurement: °C
     - unique_id: location_3_knmi_temperature
       name: "{{ location_3_name }} KNMI Temperature"
-      availability: "{{ location_3_data['status'] == 200 }}"
-      state: >
-        {% set data = location_3_data['content'] | from_json %}
-        {{ data['ranges'][parameter_var]['values'][0] }}
+      availability: "{{ valid | bool }}"
+      state: "{{ location_3_temp }}"
       state_class: measurement
       device_class: temperature
       unit_of_measurement: °C
     - unique_id: location_4_knmi_temperature
       name: "{{ location_4_name }} KNMI Temperature"
-      availability: "{{ location_4_data['status'] == 200 }}"
-      state: >
-        {% set data = location_4_data['content'] | from_json %}
-        {{ data['ranges'][parameter_var]['values'][0] }}
+      availability: "{{ valid | bool }}"
+      state: "{{ location_4_temp }}"
       state_class: measurement
       device_class: temperature
       unit_of_measurement: °C
+
+    - unique_id: location_1_knmi_wind_speed
+      name: "{{ location_1_name }} KNMI Wind Speed"
+      availability: "{{ valid | bool }}"
+      state: "{{ location_1_wind }}"
+      state_class: measurement
+      device_class: speed
+      unit_of_measurement: m/s
+    - unique_id: location_2_knmi_wind_speed
+      name: "{{ location_2_name }} KNMI Wind Speed"
+      availability: "{{ valid | bool }}"
+      state: "{{ location_2_wind }}"
+      state_class: measurement
+      device_class: speed
+      unit_of_measurement: m/s
+    - unique_id: location_3_knmi_wind_speed
+      name: "{{ location_3_name }} KNMI Wind Speed"
+      availability: "{{ valid | bool }}"
+      state: "{{ location_3_wind }}"
+      state_class: measurement
+      device_class: speed
+      unit_of_measurement: m/s
+    - unique_id: location_4_knmi_wind_speed
+      name: "{{ location_4_name }} KNMI Wind Speed"
+      availability: "{{ valid | bool }}"
+      state: "{{ location_4_wind }}"
+      state_class: measurement
+      device_class: speed
+      unit_of_measurement: m/s
+
+    - unique_id: location_1_knmi_solar_irradiance
+      name: "{{ location_1_name }} KNMI Solar Irradiance"
+      availability: "{{ valid | bool }}"
+      state: "{{ location_1_irr }}"
+      state_class: measurement
+      device_class: irradiance
+      unit_of_measurement: W/m²
+    - unique_id: location_2_knmi_solar_irradiance
+      name: "{{ location_2_name }} KNMI Solar Irradiance"
+      availability: "{{ valid | bool }}"
+      state: "{{ location_2_irr }}"
+      state_class: measurement
+      device_class: irradiance
+      unit_of_measurement: W/m²
+    - unique_id: location_3_knmi_solar_irradiance
+      name: "{{ location_3_name }} KNMI Solar Irradiance"
+      availability: "{{ valid | bool }}"
+      state: "{{ location_3_irr }}"
+      state_class: measurement
+      device_class: irradiance
+      unit_of_measurement: W/m²
+    - unique_id: location_4_knmi_solar_irradiance
+      name: "{{ location_4_name }} KNMI Solar Irradiance"
+      availability: "{{ valid | bool }}"
+      state: "{{ location_4_irr }}"
+      state_class: measurement
+      device_class: irradiance
+      unit_of_measurement: W/m²
