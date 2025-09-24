@@ -1,6 +1,7 @@
 esphome:
   name: open-air-mini
-  platform: ESP32
+
+esp32:
   board: esp32dev
 
 # Enable logging
