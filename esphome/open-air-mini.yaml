@@ -15,7 +15,6 @@ web_server:
 api:
 
 ota:
-  password: "9f2ab9aa715f573e2476e75a5ec7f4e7"
 
 wifi:
   ssid: !secret wifi_ssid
@@ -58,60 +57,31 @@ globals:
     initial_value: "55"
 
 # From V1.4.0 The Sensor pins on the Open AIR Mini are swapped. Correct example is below:
-uart:
-#UART For Sensor 2
- - rx_pin: GPIO13
-   tx_pin: GPIO12
-   baud_rate: 9600
-   id: uart_sensor_2
-#UART For Sensor 1
- - rx_pin: GPIO25
-   tx_pin: GPIO26
-   baud_rate: 9600
-   id: uart_sensor_1
+#uart:
+##UART For Sensor 2
+# - rx_pin: GPIO13
+#   tx_pin: GPIO12
+#   baud_rate: 9600
+#   id: uart_sensor_2
+##UART For Sensor 1
+# - rx_pin: GPIO25
+#   tx_pin: GPIO26
+#   baud_rate: 9600
+#   id: uart_sensor_1
 
 i2c:
-#I2C For Sensor 2
-- id: i2c_sensor_2
-  sda: GPIO19
-  scl: GPIO18
-  scan: false
-  frequency: 400kHz
+##I2C For Sensor 2
+#- id: i2c_sensor_2
+#  sda: GPIO19
+#  scl: GPIO18
+#  scan: false
+#  frequency: 400kHz
 #I2C For Sensor 1
 - id: i2c_sensor_1
   sda: GPIO16
   scl: GPIO4
   scan: false
   frequency: 400kHz
-
-#For version <1.4.0 use: (remove the # and remove above sensor pins)
-#uart:
-#UART For Sensor 2
- #- rx_pin: GPIO13
-   #tx_pin: GPIO12
-   #baud_rate: 9600
-   #id: uart_sensor_2
-#UART For Sensor 1
- #- rx_pin: GPIO25
-   #tx_pin: GPIO26
-   #baud_rate: 9600
-   #id: uart_sensor_1
-
-#i2c:
-#I2C For Sensor 2
-#- id: i2c_sensor_2
-  #sda: GPIO19
-  #scl: GPIO18
-  #scan: false
-  #frequency: 400kHz
-#I2C For Sensor 1
-#- id: i2c_sensor_1
-  #sda: GPIO16
-  #scl: GPIO4
-  #scan: false
-  #frequency: 400kHz
-
-  
 
 # Status led
 status_led:
@@ -153,22 +123,3 @@ sensor:
     entity_category: "diagnostic"
     device_class: ""
 
-script:
-  # Below includes for disconnected mode are mutually exclusive. Only use one at a time!
-  !include disconnected-mode-without-humidity.yaml
-  # !include disconnected-mode-with-humidity.yaml
-
-interval:
-  - interval: 30s
-    then:
-      - logger.log: "API Connectivity Check for Disconnected Mode"
-      - if:
-          condition:
-            not:
-              api.connected:
-          then:
-            - logger.log: "API disconnected"
-            - script.execute: disconnected_mode
-          else:
-            - logger.log: "API connected"
-            - script.stop: disconnected_mode
