@@ -128,15 +128,15 @@ sensor:
   - platform: scd4x
     i2c_id: i2c_sensor_1
     co2:
-      name: "Open AIR Mini Sensor Mini x CO2"
+      name: "Open AIR Mini Sensor 1 CO2"
       id: air_Co2
       accuracy_decimals: 0
     temperature:
-      name: "Open AIR Mini Sensor Mini x Temperature"
+      name: "Open AIR Mini Sensor 1 Temperature"
       id: air_temperature
       accuracy_decimals: 2
     humidity:
-      name: "Open AIR Mini Sensor Mini x Humidity"
+      name: "Open AIR Mini Sensor 1 Humidity"
       id: air_humidity
       accuracy_decimals: 2
     update_interval: 30s
@@ -145,10 +145,10 @@ sensor:
   - platform: sgp4x
     i2c_id: i2c_sensor_1
     voc:
-      name: "Open AIR Mini x VOC Index "
+      name: "VOC Index "
       id: air_VOC
     nox:
-      name: "Open AIR Mini x NOx Index "
+      name: "NOx Index "
       id: air_NOx
     compensation:
       temperature_source: air_temperature #Make sure to match these if you change ID's.
