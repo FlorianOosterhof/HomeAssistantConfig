@@ -1,0 +1,53 @@
+defaults:
+  # Required:
+  # name: the name of the PID controller
+  # type: "heat" or "cool": "heat" means value too low => increase PID, "cool" means value too high => increase PID
+  # default_target_value: default target value of the PID controller
+  # sensor: The sensor to track
+
+  # Optional:
+  pid_output_friendly_name: "${name} PID controller output"
+
+  # Pass-through values to climate.control_parameters:
+  kp: 1.0 # output value per error value
+  ki: 0.0 # == kp / integral_time   => default integral_time   = inf
+  kd: 0.0 # == kp * derivative_time => default derivative_time = 0.0
+  output_avg_nr_samples: 1 
+  derivative_avg_nr_samples: 1
+  min_integral: -1.0
+  max_integral: 1.0
+  starting_integral_term: 0.0
+
+output:
+  - platform: template
+    id: ${name}_pid_output
+    type: float
+    write_action:
+      - sensor.template.publish:
+          id: ${name}_pid_output_sensor
+          state: !lambda return state;
+
+sensor:
+  - platform: template
+    name: "${name} PID controller output"
+    id: ${name}_pid_output_sensor
+    unit_of_measurement: "%"
+    device_class: "power_factor"
+    filters:
+      - multiply: 100.0
+
+climate:
+  - platform: pid
+    name: ${pid_output_friendly_name}
+    internal: true
+    sensor: ${sensor}
+    default_target_temperature: ${default_target_value}
+    ${type}_output: ${name}_pid_output
+    control_parameters:
+      kp: ${kp}
+      ki: ${ki}
+      kd: ${kd}
+      min_integral: ${min_integral}
+      max_integral: ${max_integral}
+      output_averaging_samples: ${output_avg_nr_samples}
+      derivative_averaging_samples: ${derivative_avg_nr_samples}
