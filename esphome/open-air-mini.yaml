@@ -13,35 +13,6 @@ esp32:
 logger:
   level: DEBUG
 
-globals:
-  # Disconnected Mode Max Fan Speed, linked to Disconnected Hum Level Max Speed
-  - id: disconnected_max_fan_speed
-    type: int
-    restore_value: no
-    initial_value: "100"
-  # Disconnected Mode Medium Fan Speed, linked to Disconnected Hum Level Medium Speed
-  - id: disconnected_medium_fan_speed
-    type: int
-    restore_value: no
-    initial_value: "60"
-  # Disconnected Mode Default Fan Speed, for humidities lower than Disconnected Hum Level Medium Speed
-  # or if NOT using a humidity sensor. Without sensor this speed will be maintained untill a connection
-  # to Home Assistant has been restored and your automations can take over.
-  - id: disconnected_default_fan_speed
-    type: int
-    restore_value: no
-    initial_value: "25"
-  # Disconnected Mode Max Fan Speed Threshold    
-  - id: disconnected_hum_level_max_speed
-    type: int
-    restore_value: no
-    initial_value: "75"
-  # Disconnected Mode Medium Fan Speed Threshold
-  - id: disconnected_hum_level_medium_speed
-    type: int
-    restore_value: no
-    initial_value: "55"
-
 # From V1.4.0 The Sensor pins on the Open AIR Mini are swapped. Correct example is below:
 #uart:
 ##UART For Sensor 2
@@ -88,7 +59,7 @@ fan:
     output: open_air_mini
     name: "${friendly_name} Fan"
     id: fan_motor
-    
+
 sensor: 
   - platform: pulse_counter
     pin: GPIO14
