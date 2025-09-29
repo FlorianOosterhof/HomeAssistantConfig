@@ -86,7 +86,7 @@ output:
 fan:
   - platform: speed
     output: open_air_mini
-    name: "${friendly_name}"
+    name: "${friendly_name} Fan"
     id: fan_motor
     
 sensor: 
@@ -95,6 +95,11 @@ sensor:
     unit_of_measurement: 'RPM'
     name: '${friendly_name} RPM'
     id: open_air_mini_rpm
+    update_interval: 10s
+    total:
+      unit_of_measurement: 'Rotations'
+      name: '${friendly_name} Rotations'
+      state_class: total_increasing
   - platform: scd4x
     i2c_id: i2c_sensor_1
     co2:
