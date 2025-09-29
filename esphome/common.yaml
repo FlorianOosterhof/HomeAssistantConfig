@@ -8,6 +8,7 @@ esphome:
 # Always enable the webserver for easy access and manual verification
 web_server:
   port: 80
+  version: 3
 
 # Enable Home Assistant API
 api:
