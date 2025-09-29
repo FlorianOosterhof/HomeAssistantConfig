@@ -1,27 +1,17 @@
-
-
-# These substitutions allow the end user to override certain values
 substitutions:
-  name: "muino-water-meter"
+  device_name: "muino-water-meter"
+  friendly_name: "Muino Water Meter"
 
-esphome:
-  name: "${name}"
-  # Automatically add the mac address to the name
-  # so you can use a single firmware for all devices
-  name_add_mac_suffix: true
-  platformio_options:
-    board_build.flash_mode: "dio"
-
-  # This will allow for (future) project identification,
-  # configuration and updates.
-  # project:
-  #   name: esphome-muino-water-meter
-  #   version: "3.0.4"
+packages: !include common.yaml
 
 esp32:
   board: seeed_xiao_esp32c3
   framework:
     type: esp-idf
+
+esphome:
+  platformio_options:
+    board_build.flash_mode: "dio"
 
 # Triggers reading adc values and iterating algoritm
 interval:
@@ -623,29 +613,3 @@ number:
 logger:
   hardware_uart: USB_SERIAL_JTAG
   level: ERROR
-
-# API is a requirement of the dashboard import.
-api:
-
-# OTA is required for Over-the-Air updating
-ota:
-  platform: esphome
-
-# This should point to the public location of this yaml file.
-# dashboard_import:
-#   package_import_url: github://martijnvwezel/watermeter-esphome/muino-water-meter-esp32.yaml@main
-
-web_server:
-  port: 80
-
-wifi:
-  ssid: !secret wifi_ssid
-  password: !secret wifi_password
-
-  # Set up a wifi access point using the device name above
-  ap:
-    ssid: ${name}
-
-# In combination with the `ap` this allows the user
-# to provision wifi credentials to the device.
-captive_portal:
