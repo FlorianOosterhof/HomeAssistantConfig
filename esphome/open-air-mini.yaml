@@ -1,6 +1,7 @@
 substitutions:
   device_name: open-air-mini
   friendly_name: Open AIR Mini
+  sensor_interval: 10 # seconds
 
 packages: !include common.yaml
 
@@ -85,7 +86,7 @@ sensor:
       name: "${friendly_name} Sensor 1 Humidity"
       id: air_humidity
       accuracy_decimals: 2
-    update_interval: 30s
+    update_interval: "${sensor_interval}s"
     measurement_mode: periodic
 
   - platform: sgp4x
@@ -99,4 +100,4 @@ sensor:
     compensation:
       temperature_source: air_temperature #Make sure to match these if you change ID's.
       humidity_source: air_humidity       #Make sure to match these if you change ID's.
-    update_interval: 30s
+    update_interval: "${sensor_interval}s"
