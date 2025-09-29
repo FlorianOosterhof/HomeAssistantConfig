@@ -2,11 +2,15 @@ defaults:
   # Required:
   # name: the name of the PID controller
   # type: "heat" or "cool": "heat" means value too low => increase PID, "cool" means value too high => increase PID
-  # default_target_value: default target value of the PID controller
   # sensor: The sensor to track
 
   # Optional:
   pid_output_friendly_name: "${name} PID controller output"
+
+  setpoint_def: 0.0
+  setpoint_min: -1.0
+  setpoint_max: 1.0
+  setpoint_step: 0.1
 
   # Pass-through values to climate.control_parameters:
   kp: 1.0 # output value per error value
@@ -38,10 +42,14 @@ sensor:
 
 climate:
   - platform: pid
+    id: ${name}_pid
     name: ${pid_output_friendly_name}
-    internal: true
     sensor: ${sensor}
-    default_target_temperature: ${default_target_value}
+    default_target_temperature: ${setpoint_def}
+    visual:
+      min_temperature: ${setpoint_min}
+      max_temperature: ${setpoint_max}
+      temperature_step: ${setpoint_step}
     ${type}_output: ${name}_pid_output
     control_parameters:
       kp: ${kp}
