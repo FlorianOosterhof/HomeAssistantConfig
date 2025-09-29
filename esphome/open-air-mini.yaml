@@ -12,7 +12,7 @@ esp32:
 
 # Enable logging
 logger:
-  level: DEBUG
+  level: INFO
 
 # From V1.4.0 The Sensor pins on the Open AIR Mini are swapped. Correct example is below:
 #uart:
