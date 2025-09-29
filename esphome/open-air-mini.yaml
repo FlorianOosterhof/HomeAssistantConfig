@@ -166,3 +166,22 @@ sensor:
       temperature_source: air_temperature #Make sure to match these if you change ID's.
       humidity_source: air_humidity       #Make sure to match these if you change ID's.
     update_interval: "${sensor_interval}s"
+
+  - platform: combination
+    name: "${friendly_name} internal control output"
+    unit_of_measurement: "%"
+    device_class: "power_factor"
+    type: max
+    sources:
+      - source: humidity_pid_output_sensor
+      - source: co2_pid_output_sensor
+      - source: voc_pid_output_sensor
+      - source: nox_pid_output_sensor
+    filters:
+      - multiply: 0.85
+      - offset: 15.0
+    on_value:
+      then:
+        - output.set_level:
+            id: open_air_mini
+            level: !lambda return x / 100.0;
