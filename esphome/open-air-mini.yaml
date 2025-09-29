@@ -3,7 +3,72 @@ substitutions:
   friendly_name: Open AIR Mini
   sensor_interval: 10 # seconds
 
-packages: !include common.yaml
+  hum_setpoint: 65  # %
+  hum_kp: 3.3333e-2 # !lambda return 1.0 / 30.0; # => each % above setpoint is 3.3% control output
+  hum_ki: 3.3333e-4 # !lambda return 1.0 / (10.0 * 60.0 * 5.0); # Full integral takes 10 min. to empty when 5% below setpoint
+
+  co2_setpoint: 700 # ppm
+  co2_kp: 3.3333e-3 # !lambda return 1.0 / 300.0; # 1/300 => each 3 ppm above setpoint is 1% control output
+  co2_ki: 8.3333e-6 # !lambda return 1.0 / (10.0 * 60.0 * 200.0); # Full integral takes 10 min. to empty when 200ppm below setpoint
+
+  voc_setpoint: 150 # "index"
+  voc_kp: 5.0000e-3 # !lambda return 1.0 / 200.0; # 1/200 => each 2 indices above setpoint is 1% control output
+  voc_ki: 3.3333e-5 # !lambda return 1.0 / (10.0*60.0*50.0); # Full integral takes 10 min. to empty when 50 indices below setpoint
+
+  nox_setpoint: 15  # "index"
+  nox_kp: 5.0000e-3 # !lambda return 1.0 / 200.0; # 1/200 => each 2 indices above setpoint is 1% control output
+  nox_ki: 3.3333e-4 # !lambda return 1.0 / (10.0*60.0*5.0); # Full integral takes 10 min. to empty when 10 indices below setpoint
+
+packages:
+  common: !include common.yaml
+  humidity_pid: !include
+    file: pid.yaml
+    vars:
+      name: humidity
+      type: cool
+      default_target_value: ${hum_setpoint}
+      sensor: air_humidity
+      pid_output_friendly_name: "${friendly_name} Humidity PID output"
+      kp: ${hum_kp}
+      ki: ${hum_ki}
+      min_integral: -1.0
+      max_integral: 0.0
+  co2_pid: !include
+    file: pid.yaml
+    vars:
+      name: co2
+      type: cool
+      default_target_value: ${co2_setpoint}
+      sensor: air_Co2
+      pid_output_friendly_name: "${friendly_name} CO2 PID output"
+      kp: ${co2_kp}
+      ki: ${co2_ki}
+      min_integral: -1.0
+      max_integral: 0.0
+  voc_pid: !include
+    file: pid.yaml
+    vars:
+      name: voc
+      type: cool
+      default_target_value: ${voc_setpoint}
+      sensor: air_VOC
+      pid_output_friendly_name: "${friendly_name} VOC PID output"
+      kp: ${voc_kp}
+      ki: ${voc_ki}
+      min_integral: -1.0
+      max_integral: 0.0
+  nox_pid: !include
+    file: pid.yaml
+    vars:
+      name: nox
+      type: cool
+      default_target_value: ${nox_setpoint}
+      sensor: air_NOx
+      pid_output_friendly_name: "${friendly_name} NOx PID output"
+      kp: ${nox_kp}
+      ki: ${nox_ki}
+      min_integral: -1.0
+      max_integral: 0.0
 
 esp32:
   board: esp32dev
