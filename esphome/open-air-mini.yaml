@@ -4,7 +4,7 @@ substitutions:
   sensor_interval: 10 # seconds
 
   hum_setpoint: 65  # %
-  hum_kp: 3.3333e-2 # !lambda return 1.0 / 30.0; # => each % above setpoint is 3.3% control output
+  hum_kp: 4.0000e-2 # !lambda return 1.0 / 25.0; # => each % above setpoint is 4% control output
   hum_ki: 3.3333e-4 # !lambda return 1.0 / (10.0 * 60.0 * 5.0); # Full integral takes 10 min. to empty when 5% below setpoint
 
   co2_setpoint: 700 # ppm
