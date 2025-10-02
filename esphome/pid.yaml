@@ -13,14 +13,31 @@ defaults:
   setpoint_step: 0.1
 
   # Pass-through values to climate.control_parameters:
-  kp: 1.0 # output value per error value
-  ki: 0.0 # == kp / integral_time   => default integral_time   = inf
-  kd: 0.0 # == kp * derivative_time => default derivative_time = 0.0
+  kp_def: 0.0 # output value per error value. Default is off.
+  kp_min: 0.0
+  kp_max: 10.0
+  kp_step: 0.000000001
+
+  ti_def: 100000.0 # ki == kp / ti => default ki very small, practically no I-action.
+  ti_min: 0.0
+  ti_max: 100000.0 # more than 1 day
+  ti_step: 1.0
+
+  td_def: 0.0 # kd == kp * td => default kd == 0.0, no D-action
+  td_min: 0.0
+  td_max: 100000.0
+  td_step: 1.0
+
   output_avg_nr_samples: 1 
   derivative_avg_nr_samples: 1
   min_integral: -1.0
   max_integral: 1.0
   starting_integral_term: 0.0
+
+esphome:
+  on_boot:
+    - then:
+        - script.execute: ${name}_pid_set_params
 
 output:
   - platform: template
@@ -31,6 +48,90 @@ output:
           id: ${name}_pid_output_sensor
           state: !lambda return state;
 
+script:
+  - id: ${name}_pid_set_params
+    then:
+      - climate.pid.set_control_parameters:
+          id: ${name}_pid
+          kp: !lambda |-
+            const float kp = id(${name}_pid_kp).state;
+            ESP_LOGI("yaml_pid.set_params", "Calculated ${name} Kp: %.10e", kp);
+            return kp;
+          ki: !lambda |-
+            // We need some magic here: Since Ki = Kp / Ti, we need to watch for special cases of Ti == 0.0 and (theoretical) Ti == inf.
+            // Design choice Ti==inf (no I-action): The maximum value (${ti_max}) and 1 step below (${ti_max} - ${ti_step}) will set ki to 0.0
+            // Rationale: It is not possible to give a number a maximum of infinity, so the maximum and 1 admissible value below is considered infinity
+            // Design choice Ti==0.0 (Bang-Bang):   The A value of 0.0 or 1 step above (${ti_step}) will set ki to 0.0.
+            // Rationale: A Ti of 0 would result in an infinite Ki, which is just a Bang-Bang controller: above setpoint = 100% on/heat, below = 100% off/cool, so set it to 0.0 instead, because then you should just use a Bang-bang controller, not PID.
+
+            const float kp = id(${name}_pid_kp).state;
+            const float ti = id(${name}_pid_ti).state;
+            float ki = 0.0;
+            if (${ti_step} * 1.5 < ti && ti < ${ti_max} - ${ti_step} * 1.5)
+            {
+              ki = kp / ti;
+            }
+            ESP_LOGI("yaml_pid.set_params", "Calculated ${name} Ki: %.10e from Kp: %.10e and Ti: %.10e", ki, kp, ti);
+            return ki;
+          kd: !lambda |-
+            const float kp = id(${name}_pid_kp).state;
+            const float td = id(${name}_pid_td).state;
+            const float kd = kp * td;
+            ESP_LOGI("yaml_pid.set_params", "Calculated ${name} Kd: %.10e from Kp: %.10e and Td: %.10e", kd, kp, td);
+            return kd;
+
+number:
+  - platform: template
+    name: "${name} PID controller Kp"
+    id: ${name}_pid_kp
+    min_value: ${kp_min}
+    max_value: ${kp_max}
+    mode: box
+    step: ${kp_step}
+    optimistic: true
+    initial_value: ${kp_def}
+    restore_value: true
+    on_value:
+      - logger.log:
+          level: INFO
+          format: "Set ${name} Kp: %.7f"
+          args: ['x']
+      - script.execute: ${name}_pid_set_params
+
+  - platform: template
+    name: "${name} PID controller Ti"
+    id: ${name}_pid_ti
+    min_value: ${ti_min}
+    max_value: ${ti_max}
+    mode: box
+    step: ${ti_step}
+    optimistic: true
+    initial_value: ${ti_def}
+    restore_value: true
+    on_value:
+      - logger.log:
+          level: INFO
+          format: "Set ${name} Ti: %.7f"
+          args: ['x']
+      - script.execute: ${name}_pid_set_params
+
+  - platform: template
+    name: "${name} PID controller Td"
+    id: ${name}_pid_td
+    min_value: ${td_min}
+    max_value: ${td_max}
+    mode: box
+    step: ${td_step}
+    optimistic: true
+    initial_value: ${td_def}
+    restore_value: true
+    on_value:
+      - logger.log:
+          level: INFO
+          format: "Set ${name} Td: %.7f"
+          args: ['x']
+      - script.execute: ${name}_pid_set_params
+
 sensor:
   - platform: template
     name: "${name} PID controller output"
@@ -39,6 +140,30 @@ sensor:
     device_class: "power_factor"
     filters:
       - multiply: 100.0
+
+  - platform: pid
+    climate_id: ${name}_pid
+    type: KP
+    name: "${name} PID controller Kp sensor"
+    id: ${name}_pid_kp_sensor
+    unit_of_measurement: ""
+    accuracy_decimals: 10
+
+  - platform: pid
+    climate_id: ${name}_pid
+    type: KI
+    name: "${name} PID controller Ki sensor"
+    id: ${name}_pid_ki_sensor
+    unit_of_measurement: ""
+    accuracy_decimals: 10
+
+  - platform: pid
+    climate_id: ${name}_pid
+    type: KD
+    name: "${name} PID controller Kd sensor"
+    id: ${name}_pid_kd_sensor
+    unit_of_measurement: ""
+    accuracy_decimals: 10
 
 climate:
   - platform: pid
@@ -52,9 +177,10 @@ climate:
       temperature_step: ${setpoint_step}
     ${type}_output: ${name}_pid_output
     control_parameters:
-      kp: ${kp}
-      ki: ${ki}
-      kd: ${kd}
+      # kp, ki & kd are set by the ${name}_pid_set_params script on boot and when a parameter changes.
+      kp: 0.0
+      ki: 0.0
+      kd: 0.0
       min_integral: ${min_integral}
       max_integral: ${max_integral}
       output_averaging_samples: ${output_avg_nr_samples}
