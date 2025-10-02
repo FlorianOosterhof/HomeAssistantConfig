@@ -39,6 +39,11 @@ esphome:
     - then:
         - script.execute: ${name}_pid_set_params
 
+web_server:
+  sorting_groups:
+    - id: sorting_group_${name}_pid
+      name: "${friendly_name_base} PID controller"
+
 output:
   - platform: template
     id: ${name}_pid_output
@@ -97,6 +102,9 @@ number:
           format: "Set ${name} Kp: %.7f"
           args: ['x']
       - script.execute: ${name}_pid_set_params
+    web_server:
+      sorting_group_id: sorting_group_${name}_pid
+      sorting_weight: 1
 
   - platform: template
     name: "${friendly_name_base} PID controller Ti input"
@@ -114,6 +122,9 @@ number:
           format: "Set ${name} Ti: %.7f"
           args: ['x']
       - script.execute: ${name}_pid_set_params
+    web_server:
+      sorting_group_id: sorting_group_${name}_pid
+      sorting_weight: 2
 
   - platform: template
     name: "${friendly_name_base} PID controller Td input"
@@ -131,6 +142,9 @@ number:
           format: "Set ${name} Td: %.7f"
           args: ['x']
       - script.execute: ${name}_pid_set_params
+    web_server:
+      sorting_group_id: sorting_group_${name}_pid
+      sorting_weight: 3
 
 sensor:
   - platform: template
@@ -140,6 +154,9 @@ sensor:
     device_class: "power_factor"
     filters:
       - multiply: 100.0
+    web_server:
+      sorting_group_id: sorting_group_${name}_pid
+      sorting_weight: 7
 
   - platform: pid
     climate_id: ${name}_pid
@@ -148,6 +165,9 @@ sensor:
     id: ${name}_pid_kp_sensor
     unit_of_measurement: ""
     accuracy_decimals: 10
+    web_server:
+      sorting_group_id: sorting_group_${name}_pid
+      sorting_weight: 4
 
   - platform: pid
     climate_id: ${name}_pid
@@ -156,6 +176,9 @@ sensor:
     id: ${name}_pid_ki_sensor
     unit_of_measurement: ""
     accuracy_decimals: 10
+    web_server:
+      sorting_group_id: sorting_group_${name}_pid
+      sorting_weight: 5
 
   - platform: pid
     climate_id: ${name}_pid
@@ -164,6 +187,9 @@ sensor:
     id: ${name}_pid_kd_sensor
     unit_of_measurement: ""
     accuracy_decimals: 10
+    web_server:
+      sorting_group_id: sorting_group_${name}_pid
+      sorting_weight: 6
 
 climate:
   - platform: pid
@@ -185,3 +211,6 @@ climate:
       max_integral: ${max_integral}
       output_averaging_samples: ${output_avg_nr_samples}
       derivative_averaging_samples: ${derivative_avg_nr_samples}
+    web_server:
+      sorting_group_id: sorting_group_${name}_pid
+      sorting_weight: 0
