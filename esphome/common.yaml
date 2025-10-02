@@ -27,6 +27,10 @@ wifi:
 
 captive_portal:
 
+button:
+  - platform: restart
+    name: "${friendly_name} Restart"
+
 text_sensor:
   # Expose ESPHome version
   - platform: version
