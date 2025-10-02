@@ -124,6 +124,7 @@ fan:
     output: open_air_mini
     name: "${friendly_name} Fan"
     id: fan_motor
+    internal: true
 
 sensor: 
   - platform: pulse_counter
