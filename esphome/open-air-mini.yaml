@@ -34,8 +34,8 @@ packages:
       setpoint_step: 10
       sensor: air_Co2
       pid_output_friendly_name: "${friendly_name} CO2 PID output"
-      kp_def: 3.3333e-3 # [0-1/ppm] = 1 / 300 => each 3 PPM above setpoint is 1% control output
-      ti_def: 400       # [s]         ki = 1 / 300 / 400 = 1 / 120000 => 120000 = 60 * 10 * 200 = 60 * 5 * 400, e.g. it takes 10min@error=-200ppm or 5min@error=-400ppm to drain the integral
+      kp_def: 1.6666e-3 # [0-1/ppm] = 1 / 600 => each 3 PPM above setpoint is 1% control output
+      ti_def: 400       # [s]         ki = 1 / 600 / 400 = 1 / 240000 => 240000 = 60 * 20 * 200 = 60 * 10 * 400, e.g. it takes 20min@error=-200ppm or 10min@error=-400ppm to drain the integral
       min_integral: -0.5 # Full integral without error (i.e. when crossing back to below setpoint) is 50% control output
       max_integral: 0.0
   voc_pid: !include
