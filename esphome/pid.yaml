@@ -5,7 +5,7 @@ defaults:
   # sensor: The sensor to track
 
   # Optional:
-  pid_output_friendly_name: "${name} PID controller output"
+  friendly_name_base: "${name} PID controller output"
 
   setpoint_def: 0.0
   setpoint_min: -1.0
@@ -82,7 +82,7 @@ script:
 
 number:
   - platform: template
-    name: "${name} PID controller Kp"
+    name: "${friendly_name_base} PID controller Kp input"
     id: ${name}_pid_kp
     min_value: ${kp_min}
     max_value: ${kp_max}
@@ -99,7 +99,7 @@ number:
       - script.execute: ${name}_pid_set_params
 
   - platform: template
-    name: "${name} PID controller Ti"
+    name: "${friendly_name_base} PID controller Ti input"
     id: ${name}_pid_ti
     min_value: ${ti_min}
     max_value: ${ti_max}
@@ -116,7 +116,7 @@ number:
       - script.execute: ${name}_pid_set_params
 
   - platform: template
-    name: "${name} PID controller Td"
+    name: "${friendly_name_base} PID controller Td input"
     id: ${name}_pid_td
     min_value: ${td_min}
     max_value: ${td_max}
@@ -134,7 +134,7 @@ number:
 
 sensor:
   - platform: template
-    name: "${name} PID controller output"
+    name: "${friendly_name_base} PID controller output"
     id: ${name}_pid_output_sensor
     unit_of_measurement: "%"
     device_class: "power_factor"
@@ -144,7 +144,7 @@ sensor:
   - platform: pid
     climate_id: ${name}_pid
     type: KP
-    name: "${name} PID controller Kp sensor"
+    name: "${friendly_name_base} PID controller Kp value"
     id: ${name}_pid_kp_sensor
     unit_of_measurement: ""
     accuracy_decimals: 10
@@ -152,7 +152,7 @@ sensor:
   - platform: pid
     climate_id: ${name}_pid
     type: KI
-    name: "${name} PID controller Ki sensor"
+    name: "${friendly_name_base} PID controller Ki value"
     id: ${name}_pid_ki_sensor
     unit_of_measurement: ""
     accuracy_decimals: 10
@@ -160,7 +160,7 @@ sensor:
   - platform: pid
     climate_id: ${name}_pid
     type: KD
-    name: "${name} PID controller Kd sensor"
+    name: "${friendly_name_base} PID controller Kd value"
     id: ${name}_pid_kd_sensor
     unit_of_measurement: ""
     accuracy_decimals: 10
@@ -168,7 +168,7 @@ sensor:
 climate:
   - platform: pid
     id: ${name}_pid
-    name: ${pid_output_friendly_name}
+    name: "${friendly_name_base} PID controller"
     sensor: ${sensor}
     default_target_temperature: ${setpoint_def}
     visual:

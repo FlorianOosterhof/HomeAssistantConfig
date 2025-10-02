@@ -18,7 +18,7 @@ packages:
       setpoint_max: 100
       setpoint_step: 1
       sensor: air_humidity
-      pid_output_friendly_name: "${friendly_name} Humidity PID output"
+      friendly_name_base: "${friendly_name} Sensor 1 Humidity"
       kp_def: 0.04  # [0-1/%] = 1 / 25 => each % above setpoint is 4% control output
       ti_def: 120.0 # [s]       ki = kp / ti = 0.04 / 120 = 1/3000 => 3000 = 60 * 10 * 5 = 60 * 5 * 10, e.g. it takes 10min@error=-5% or 5min@error=10% to drain integral
       min_integral: -0.75 # Full integral without error (i.e. when crossing back to below setpoint) is 75% control output
@@ -33,7 +33,7 @@ packages:
       setpoint_max: 2000
       setpoint_step: 10
       sensor: air_Co2
-      pid_output_friendly_name: "${friendly_name} CO2 PID output"
+      friendly_name_base: "${friendly_name} Sensor 1 CO2"
       kp_def: 1.6666e-3 # [0-1/ppm] = 1 / 600 => each 3 PPM above setpoint is 1% control output
       ti_def: 400       # [s]         ki = 1 / 600 / 400 = 1 / 240000 => 240000 = 60 * 20 * 200 = 60 * 10 * 400, e.g. it takes 20min@error=-200ppm or 10min@error=-400ppm to drain the integral
       min_integral: -0.5 # Full integral without error (i.e. when crossing back to below setpoint) is 50% control output
@@ -48,7 +48,7 @@ packages:
       setpoint_max: 500
       setpoint_step: 1
       sensor: air_VOC
-      pid_output_friendly_name: "${friendly_name} VOC PID output"
+      friendly_name_base: "${friendly_name} Sensor 1 VOC"
       kp_def: 5.0000e-3 # [0-1/index] = 1 / 200 => each 2 indices above setpoint is 1% control output
       ti_def: 150       # [s]           ki = 1 / 200 / 150 = 1 / 30000 => 30000 = 60 * 10 * 50 = 60 * 5 * 100, e.g. it takes 10min@error=-50index or 5min@error=-100index to drain the integral
       min_integral: -0.5 # Full integral without error (i.e. when crossing back to below setpoint) is 50% control output
@@ -63,7 +63,7 @@ packages:
       setpoint_max: 500
       setpoint_step: 1
       sensor: air_NOx
-      pid_output_friendly_name: "${friendly_name} NOx PID output"
+      friendly_name_base: "${friendly_name} Sensor 1 NOx"
       kp_def: 5.0000e-3 # [0-1/index] = 1 / 200 => each 2 indices above setpoint is 1% control output
       ti_def: 15        # [s]           ki = 1 / 200 / 15 = 1 / 3000 => 3000 = 60 * 10 * 5 = 60 * 5 * 10, e.g. it takes 10min@error=-5index or 5min@error=-10index to drain the integral
       min_integral: -1.0
@@ -130,12 +130,12 @@ sensor:
   - platform: pulse_counter
     pin: GPIO14
     unit_of_measurement: 'RPM'
-    name: '${friendly_name} RPM'
+    name: '${friendly_name} Fan RPM'
     id: open_air_mini_rpm
     update_interval: 10s
     total:
       unit_of_measurement: 'Rotations'
-      name: '${friendly_name} Rotations'
+      name: '${friendly_name} Fan Rotations'
       state_class: total_increasing
 
   - platform: scd4x
@@ -158,10 +158,10 @@ sensor:
   - platform: sgp4x
     i2c_id: i2c_sensor_1
     voc:
-      name: "${friendly_name} VOC Index "
+      name: "${friendly_name} Sensor 1 VOC Index "
       id: air_VOC
     nox:
-      name: "${friendly_name} NOx Index "
+      name: "${friendly_name} Sensor 1 NOx Index "
       id: air_NOx
     compensation:
       temperature_source: air_temperature #Make sure to match these if you change ID's.
@@ -169,7 +169,7 @@ sensor:
     update_interval: "${sensor_interval}s"
 
   - platform: combination
-    name: "${friendly_name} internal control output"
+    name: "${friendly_name} Maximum of Control Outputs"
     unit_of_measurement: "%"
     device_class: "power_factor"
     type: max
@@ -186,7 +186,7 @@ sensor:
 
   - platform: template
     id: open_air_mini_pwm
-    name: "${friendly_name} fan PWM setpoint"
+    name: "${friendly_name} Fan PWM Setpoint"
     unit_of_measurement: "%"
     device_class: "power_factor"
     update_interval: never
