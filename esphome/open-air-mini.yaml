@@ -1,7 +1,9 @@
 substitutions:
   device_name: open-air-mini
   friendly_name: Open AIR Mini
+
   sensor_interval: 10 # seconds
+  external_control_output_reset_time_seconds: 60 # seconds
 
   fan_setpoint_min: 15.0
   fan_setpoint_max: 100.0
@@ -68,6 +70,12 @@ packages:
       ti_def: 15        # [s]           ki = 1 / 200 / 15 = 1 / 3000 => 3000 = 60 * 10 * 5 = 60 * 5 * 10, e.g. it takes 10min@error=-5index or 5min@error=-10index to drain the integral
       min_integral: -1.0
       max_integral: 0.0
+  resetting_sensor: !include
+    file: resetting_sensor.yaml
+    vars:
+      script_id: open_air_mini_external_control_reset_script
+      sensor_id: open_air_mini_external_control_output_sensor
+      additional_reset_action: "id(open_air_mini_external_control_output_number)->publish_state(reset_value);"
 
 esp32:
   board: esp32dev
@@ -126,6 +134,31 @@ fan:
     id: fan_motor
     internal: true
 
+number:
+  - platform: template
+    name: "${friendly_name} External Control Output"
+    id: open_air_mini_external_control_output_number
+    min_value: 0.0
+    max_value: 100.0
+    step: 1.0
+    optimistic: true
+    initial_value: 0.0
+    restore_value: true
+    unit_of_measurement: "%"
+    device_class: "power_factor"
+    on_value:
+        # Execute the reset script on value > 0.0 (which is the reset value). Else only set the sensor accordingly.
+        # Otherwise the publish_state to the reset value triggers the reset timer again, resulting in much logging.
+        - if:
+            condition:
+              lambda: return x > 0.0;
+            then:
+              - script.execute:
+                  id: open_air_mini_external_control_reset_script
+                  new_value: !lambda return x;
+                  reset_value: 0.0
+                  reset_time_ms: !lambda return ${external_control_output_reset_time_seconds} * 1000;
+
 sensor: 
   - platform: pulse_counter
     pin: GPIO14
@@ -168,6 +201,12 @@ sensor:
       humidity_source: air_humidity       #Make sure to match these if you change ID's.
     update_interval: "${sensor_interval}s"
 
+  - platform: template
+    name: "${friendly_name} External Control Output Sensor"
+    id: open_air_mini_external_control_output_sensor
+    unit_of_measurement: "%"
+    device_class: "power_factor"
+
   - platform: combination
     name: "${friendly_name} Maximum of Control Outputs"
     unit_of_measurement: "%"
@@ -178,6 +217,7 @@ sensor:
       - source: co2_pid_output_sensor
       - source: voc_pid_output_sensor
       - source: nox_pid_output_sensor
+      - source: open_air_mini_external_control_output_sensor
     on_value:
       then:
         - sensor.template.publish:
