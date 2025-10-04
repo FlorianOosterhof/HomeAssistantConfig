@@ -1,0 +1,27 @@
+defaults:
+  # Required:
+  # script_id: id of the script
+  # sensor_id: id of the sensor
+  additional_reset_action: "return;"
+
+script:
+  - id: ${script_id}
+    mode: restart
+    parameters:
+      new_value: float
+      reset_value: float
+      reset_time_ms: int # [ms]
+    then:
+      - logger.log:
+          level: INFO
+          format: "Template sensor '%s': Publish state %.7f' and start reset timer of %.4f seconds."
+          args: ['id(${sensor_id})->get_name().c_str()', 'new_value', 'float(reset_time_ms) / 1000.0']
+      - lambda: id(${sensor_id})->publish_state(new_value);
+      - delay: !lambda return reset_time_ms;
+      # Due to mode "restart" this action is not performed if the template is changed/re-applied within the timeout
+      - logger.log:
+          level: INFO
+          format: "Template sensor '%s': Reset to value: %.4g"
+          args: ['id(${sensor_id})->get_name().c_str()', 'reset_value']
+      - lambda: id(${sensor_id})->publish_state(reset_value);
+      - lambda: ${additional_reset_action}
