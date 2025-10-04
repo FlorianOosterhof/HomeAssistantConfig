@@ -4,6 +4,8 @@ substitutions:
 
   sensor_interval: 10 # seconds
   external_control_output_reset_time_seconds: 60 # seconds
+  panic_mode_control_output: 100.0 # %
+  panic_mode_duration_seconds: 120 # seconds
 
   fan_setpoint_min: 15.0
   fan_setpoint_max: 100.0
@@ -70,12 +72,18 @@ packages:
       ti_def: 15        # [s]           ki = 1 / 200 / 15 = 1 / 3000 => 3000 = 60 * 10 * 5 = 60 * 5 * 10, e.g. it takes 10min@error=-5index or 5min@error=-10index to drain the integral
       min_integral: -1.0
       max_integral: 0.0
-  resetting_sensor: !include
+  external_control_reset: !include
     file: resetting_sensor.yaml
     vars:
       script_id: open_air_mini_external_control_reset_script
       sensor_id: open_air_mini_external_control_output_sensor
       additional_reset_action: "id(open_air_mini_external_control_output_number)->publish_state(reset_value);"
+  panic_mode_reset: !include
+    file: resetting_sensor.yaml
+    vars:
+      script_id: open_air_mini_panic_mode_reset_script
+      sensor_id: open_air_mini_panic_mode_control_output_sensor
+      # additional_reset_action: # not needed, there is no number/input that needs to be reset along with the sensor: It is only a button that enables panic mode or resets the timer if already enabled.
 
 esp32:
   board: esp32dev
@@ -159,6 +167,17 @@ number:
                   reset_value: 0.0
                   reset_time_ms: !lambda return ${external_control_output_reset_time_seconds} * 1000;
 
+button:
+  - platform: template
+    icon: mdi:emoticon-poop
+    name: "${friendly_name} Panic Mode"
+    on_press:
+      - script.execute:
+          id: open_air_mini_panic_mode_reset_script
+          new_value: ${panic_mode_control_output}
+          reset_value: 0.0
+          reset_time_ms: !lambda return ${panic_mode_duration_seconds} * 1000;
+
 sensor: 
   - platform: pulse_counter
     pin: GPIO14
@@ -207,6 +226,12 @@ sensor:
     unit_of_measurement: "%"
     device_class: "power_factor"
 
+  - platform: template
+    name: "${friendly_name} Panic Mode Control Output Sensor"
+    id: open_air_mini_panic_mode_control_output_sensor
+    unit_of_measurement: "%"
+    device_class: "power_factor"
+
   - platform: combination
     name: "${friendly_name} Maximum of Control Outputs"
     unit_of_measurement: "%"
@@ -218,6 +243,7 @@ sensor:
       - source: voc_pid_output_sensor
       - source: nox_pid_output_sensor
       - source: open_air_mini_external_control_output_sensor
+      - source: open_air_mini_panic_mode_control_output_sensor
     on_value:
       then:
         - sensor.template.publish:
