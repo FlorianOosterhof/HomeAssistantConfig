@@ -10,6 +10,10 @@ substitutions:
   fan_setpoint_min: 15.0
   fan_setpoint_max: 100.0
 
+esphome:
+  includes:
+    open-air-mini.h
+
 packages:
   common: !include common.yaml
   humidity_pid: !include
@@ -200,10 +204,14 @@ sensor:
       name: "${friendly_name} Sensor 1 Temperature"
       id: air_temperature
       accuracy_decimals: 2
+      filters:
+        lambda: return correct_temperature(x, id(open_air_mini_rpm).state);
     humidity:
       name: "${friendly_name} Sensor 1 Humidity"
       id: air_humidity
       accuracy_decimals: 2
+      filters:
+        lambda: return correct_humidity(x, id(air_temperature).state, id(open_air_mini_rpm).state);
     update_interval: "${sensor_interval}s"
     measurement_mode: periodic
 
