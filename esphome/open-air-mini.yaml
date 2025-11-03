@@ -201,21 +201,21 @@ sensor:
       id: air_Co2
       accuracy_decimals: 0
       filters:
-        heartbeat: 1s
+        - heartbeat: 1s
     temperature:
       name: "${friendly_name} Sensor 1 Temperature"
       id: air_temperature
       accuracy_decimals: 2
       filters:
-        lambda: return correct_temperature(x, id(open_air_mini_rpm).state);
+        - lambda: return correct_temperature(x, id(open_air_mini_rpm).state);
     humidity:
       name: "${friendly_name} Sensor 1 Humidity"
       id: air_humidity
       accuracy_decimals: 2
       filters:
         # Pass "raw_state" and "state" of the temperature: the "uncorrected" and "corrected" temperatures.
-        lambda: return correct_humidity(x, id(air_temperature).raw_state, id(air_temperature).state, id(open_air_mini_rpm).state);
-        heartbeat: 1s
+        - lambda: return correct_humidity(x, id(air_temperature).raw_state, id(air_temperature).state, id(open_air_mini_rpm).state);
+        - heartbeat: 1s
     update_interval: "${sensor_interval}s"
     measurement_mode: periodic
 
@@ -225,12 +225,12 @@ sensor:
       name: "${friendly_name} Sensor 1 VOC Index "
       id: air_VOC
       filters:
-        heartbeat: 1s
+        - heartbeat: 1s
     nox:
       name: "${friendly_name} Sensor 1 NOx Index "
       id: air_NOx
       filters:
-        heartbeat: 1s
+        - heartbeat: 1s
     compensation:
       temperature_source: air_temperature #Make sure to match these if you change ID's.
       humidity_source: air_humidity       #Make sure to match these if you change ID's.
