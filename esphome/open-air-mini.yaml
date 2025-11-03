@@ -211,7 +211,8 @@ sensor:
       id: air_humidity
       accuracy_decimals: 2
       filters:
-        lambda: return correct_humidity(x, id(air_temperature).state, id(open_air_mini_rpm).state);
+        # Pass "raw_state" and "state" of the temperature: the "uncorrected" and "corrected" temperatures.
+        lambda: return correct_humidity(x, id(air_temperature).raw_state, id(air_temperature).state, id(open_air_mini_rpm).state);
     update_interval: "${sensor_interval}s"
     measurement_mode: periodic
 

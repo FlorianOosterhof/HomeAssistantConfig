@@ -16,9 +16,8 @@ inline float correct_temperature(const float old_temp, const float rpm)
     return new_temp;
 }
 
-inline float correct_humidity(const float old_hum, const float old_temp, const float rpm)
+inline float correct_humidity(const float old_hum, const float old_temp, const float new_temp, const float rpm)
 {
-    const float new_temp = correct_temperature(old_temp, rpm);
     const float old_press = calculate_saturation_water_vapor_pressure(old_temp);
     const float new_press = calculate_saturation_water_vapor_pressure(new_temp);
     const float new_hum_raw = old_hum * old_press / new_press;
