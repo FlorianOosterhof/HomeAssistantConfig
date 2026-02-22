@@ -148,6 +148,46 @@ fan:
 
 number:
   - platform: template
+    name: "${friendly_name} Minimal Fan Setpoint"
+    id: open_air_mini_min_fan_setpoint
+    min_value: ${fan_setpoint_min}
+    max_value: ${fan_setpoint_max}
+    step: 1.0
+    optimistic: true
+    initial_value: ${fan_setpoint_min}
+    restore_value: true
+    unit_of_measurement: "%"
+    device_class: "power_factor"
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: "return id(open_air_mini_max_fan_setpoint).state < x;"
+            then:
+              - number.set:
+                  id: open_air_mini_max_fan_setpoint
+                  value: !lambda return x;
+  - platform: template
+    name: "${friendly_name} Maximal Fan Setpoint"
+    id: open_air_mini_max_fan_setpoint
+    min_value: ${fan_setpoint_min}
+    max_value: ${fan_setpoint_max}
+    step: 1.0
+    optimistic: true
+    initial_value: ${fan_setpoint_max}
+    restore_value: true
+    unit_of_measurement: "%"
+    device_class: "power_factor"
+    on_value:
+      then:
+        - if:
+            condition:
+              lambda: "return id(open_air_mini_min_fan_setpoint).state > x;"
+            then:
+              - number.set:
+                  id: open_air_mini_min_fan_setpoint
+                  value: !lambda return x;
+  - platform: template
     name: "${friendly_name} External Control Output"
     id: open_air_mini_external_control_output_number
     min_value: 0.0
