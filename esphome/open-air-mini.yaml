@@ -7,7 +7,7 @@ substitutions:
   panic_mode_control_output: 100.0 # %
   panic_mode_duration_seconds: 120 # seconds
 
-  fan_setpoint_min: 15.0
+  fan_setpoint_min: 10.0
   fan_setpoint_max: 100.0
 
 esphome:
@@ -304,7 +304,7 @@ sensor:
       then:
         - sensor.template.publish:
             id: open_air_mini_pwm
-            state: !lambda return (x * ${fan_setpoint_max} + (100.0 - x) * ${fan_setpoint_min}) / 100.0;
+            state: !lambda return (x * id(open_air_mini_max_fan_setpoint).state + (100.0 - x) * id(open_air_mini_min_fan_setpoint).state) / 100.0;
 
   - platform: template
     id: open_air_mini_pwm
